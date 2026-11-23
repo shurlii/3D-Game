@@ -190,11 +190,6 @@ export function createDecor(scene) {
   bag.add(flourPatch(0.5, 0.3, 0.75, 0.9, 0.001));
   pin.add(flourPatch(0, 0.0, 0.6, 0.8, -0.109));
   cups.add(flourPatch(0.2, 0.1, 0.5, 0.75, 0.001));
-  const dust = new THREE.Group();
-  dust.add(flourPatch(0, 0.42, 0.42));
-  dust.add(pawPrint(-0.25, 0.5, 0.3), pawPrint(0.05, 0.38, -0.2), pawPrint(0.33, 0.5, 0.25));
-  root.add(dust);
-
   let t = 0;
   return {
     root,
