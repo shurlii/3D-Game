@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <title>Meow Bakery 3D</title>
-  <meta name="description" content="구름 위 빵집에서 하늘에서 떨어지는 재료를 받는 3D 게임">
+  <meta name="description" content="구름 위 빵집에서 재료를 모으고, 굽고, 고양이 손님에게 파는 3D 게임">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%E2%98%81%EF%B8%8F%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="./style.css">
   <script type="importmap">
@@ -12,41 +12,96 @@
   </script>
 </head>
 <body>
-  <canvas id="scene" aria-label="3D 게임 화면"></canvas>
+  <div id="app">
+    <canvas id="scene" aria-label="3D 게임 화면"></canvas>
 
-  <div id="hud" hidden>
-    <div id="timer" aria-live="off">30</div>
-    <div id="chips"></div>
+    <!-- 매장 화면 -->
+    <div id="storeUI" hidden>
+      <div id="topbar">
+        <div class="left">
+          <div id="wallet" class="pill">츄르 <b id="walletNum">0</b></div>
+          <div class="open-row">
+            <button id="openBtn" class="pill-btn" type="button">영업 시작</button>
+            <button id="closeBtn" class="pill-btn" type="button" disabled>영업 종료</button>
+          </div>
+        </div>
+        <div class="round-btns">
+          <button id="gatherBtn" class="round" type="button">재료<br>모으기</button>
+          <button id="shopBtn" class="round" type="button">재료<br>사기</button>
+          <button id="salesBtn" class="round" type="button">오늘<br>매출</button>
+        </div>
+      </div>
+
+      <div id="custLayer"></div>
+
+      <div id="bottom">
+        <div id="tip"></div>
+        <div id="bowl">
+          <div id="bowlIcons"></div>
+          <button id="bakeBtn" class="bake" type="button" hidden></button>
+          <button id="clearBtn" class="mini" type="button">비우기</button>
+          <div id="bowlMsg"></div>
+        </div>
+        <div id="goods"></div>
+        <div id="shelf"></div>
+      </div>
+    </div>
+
+    <!-- 재료 모으기 화면 -->
+    <div id="hud" hidden>
+      <div id="timer" aria-live="off">30</div>
+      <div id="chips"></div>
+    </div>
+    <div id="countdown" hidden></div>
+
+    <section id="gatherResult" class="card-wrap" hidden>
+      <div class="card">
+        <p class="eyebrow">재료 모으기 끝!</p>
+        <h2>모은 재료 <span id="gTotal">0</span>개</h2>
+        <ul id="gList" class="grid-list"></ul>
+        <p id="gPoop" class="how"></p>
+        <p class="how">모은 재료는 매장 선반에 들어갔어요.</p>
+        <div class="btn-row">
+          <button id="gAgainBtn" class="btn ghost" type="button">한 번 더</button>
+          <button id="gBackBtn" class="btn" type="button">매장으로</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 시작 카드 -->
+    <section id="start" class="card-wrap">
+      <div class="card">
+        <p class="eyebrow">구름 위 빵집</p>
+        <h1>Meow Bakery <span>3D</span></h1>
+        <ol class="steps">
+          <li><b>재료 모으기</b>로 하늘에서 떨어지는 재료를 받아요</li>
+          <li><b>영업 시작</b>을 누르면 고양이 손님이 줄을 서요</li>
+          <li>말풍선을 누르면 파티시에가 <b>오븐에 구워요</b></li>
+          <li>구운 메뉴를 손님에게 건네면 <b>츄르</b>를 벌어요</li>
+        </ol>
+        <p class="how">오래 기다린 손님은 화가 나서 떠나고, 메뉴 값만큼 매출이 깎여요.</p>
+        <button id="startBtn" class="btn" type="button">시작하기</button>
+      </div>
+    </section>
+
+    <!-- 사기 / 매출 / 영업 결과 -->
+    <section id="panel" class="card-wrap" hidden>
+      <div class="card wide">
+        <div id="panelBody"></div>
+        <button id="panelClose" class="btn" type="button">닫기</button>
+      </div>
+    </section>
+
+    <section id="nogl" class="card-wrap" hidden>
+      <div class="card">
+        <h2>3D를 표시할 수 없어요</h2>
+        <p class="desc">이 기기나 브라우저에서는 3D(WebGL)를 쓸 수 없는 것 같아요.<br>다른 브라우저(Chrome, Safari 최신 버전)로 열어 보세요.</p>
+      </div>
+    </section>
+
+    <div id="toast" role="status" hidden></div>
+    <div id="wipe" hidden></div>
   </div>
-
-  <div id="countdown" hidden></div>
-
-  <section id="start" class="card-wrap">
-    <div class="card">
-      <p class="eyebrow">구름 위 빵집</p>
-      <h1>Meow Bakery <span>3D</span></h1>
-      <p class="desc">30초 동안 하늘에서 떨어지는 베이킹 재료를 바구니에 받아요.<br><b>똥</b>을 받으면 이번 판 재료가 모두 사라지니 조심하세요!</p>
-      <p class="how">마우스·터치로 바구니 이동 / 방향키 ← →</p>
-      <button id="startBtn" class="btn" type="button">시작하기</button>
-    </div>
-  </section>
-
-  <section id="result" class="card-wrap" hidden>
-    <div class="card">
-      <p class="eyebrow">시간 끝!</p>
-      <h2>모은 재료 <span id="total">0</span>개</h2>
-      <ul id="resultList"></ul>
-      <p id="poopNote" class="how"></p>
-      <button id="againBtn" class="btn" type="button">다시 하기</button>
-    </div>
-  </section>
-
-  <section id="nogl" class="card-wrap" hidden>
-    <div class="card">
-      <h2>3D를 표시할 수 없어요</h2>
-      <p class="desc">이 기기나 브라우저에서는 3D(WebGL)를 쓸 수 없는 것 같아요.<br>다른 브라우저(Chrome, Safari 최신 버전)로 열어 보세요.</p>
-    </div>
-  </section>
 
   <script src="./vendor/gsap.min.js"></script>
   <script type="module" src="./src/main.js"></script>

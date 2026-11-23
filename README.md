@@ -1,18 +1,27 @@
 # Meow Bakery 3D
 
-구름 위 빵집에서 30초 동안 하늘에서 떨어지는 베이킹 재료를 바구니에 받는 3D 게임입니다.
-똥을 받으면 이번 판에 모은 재료가 모두 사라집니다.
+구름 위 빵집에서 재료를 모으고, 오븐에 굽고, 고양이 손님에게 파는 3D 게임입니다.
 
-- 조작: 마우스·터치로 바구니 이동 / 방향키 ← → (또는 A, D)
-- 3D: [Three.js](https://threejs.org/) 0.187.0
-- 움직임·효과: [GSAP](https://gsap.com/) 3.15.1
-- 빌드 없이 `index.html`과 `src/main.js`만으로 동작합니다. 라이브러리 파일은 `vendor/`에 들어 있습니다.
+## 게임 방법
+1. **재료 모으기**: 30초 동안 하늘에서 떨어지는 재료를 바구니에 받아요. 똥을 받으면 이번 판 재료가 모두 사라져요.
+2. **영업 시작**: 고양이 손님이 줄을 서고 말풍선에 원하는 메뉴와 재료가 떠요.
+3. 말풍선을 누르면 필요한 재료를 넣어 파티시에가 오븐에 구워요(약 2초). 선반의 재료를 직접 눌러 그릇에 담을 수도 있어요.
+4. 구운 메뉴를 눌러 손님에게 건네면 츄르를 벌어요. 1분 넘게 기다린 손님은 화가 나서 떠나고, 못 판 메뉴 값만큼 손해가 나요.
+5. **재료 사기**로 츄르를 써서 재료를 사고, **오늘 매출**에서 장부를 볼 수 있어요. **영업 종료**를 누르면 오늘 매출이 기록돼요.
 
-## 파일
-- `index.html`, `style.css`, `src/main.js`: 게임 본체
-- `vendor/`: Three.js(MIT, `THREE-LICENSE.txt` 참고), GSAP(GSAP 표준 라이선스: https://gsap.com/standard-license)
-- `assets/cats/`: 고양이 그림(기존 Meow Bakery 프로젝트에서 가져옴. 그림 출처 표기는 원 프로젝트에서 확인 필요)
+기록(지갑, 재료, 매출 장부)은 이 기기의 브라우저(localStorage)에 저장돼요.
+
+## 기술
+- 3D: [Three.js](https://threejs.org/) 0.187.0, 움직임·효과: [GSAP](https://gsap.com/) 3.15.1
+- 빌드 없이 `index.html`과 `src/*.js`만으로 동작해요. 라이브러리 파일은 `vendor/`에 들어 있어요.
+- 진동 효과: `navigator.vibrate`를 지원하는 기기(주로 안드로이드)에서만 폰이 진동해요. 지원하지 않는 기기에서는 화면이 떨리는 효과만 나와요.
+- 확인용: 주소 뒤에 `?patience=8`을 붙이면 손님이 8초 만에 화내요.
 
 ## 로컬에서 열기
-저장소 폴더에서 `python3 -m http.server`를 실행하고 http://localhost:8000 을 엽니다.
-(파일을 더블클릭하면 브라우저가 모듈 불러오기를 막아서 작동하지 않습니다.)
+저장소 폴더에서 `python3 -m http.server`를 실행하고 http://localhost:8000 을 열어요.
+(파일을 더블클릭하면 브라우저가 모듈 불러오기를 막아서 동작하지 않아요.)
+
+## 파일
+- `index.html`, `style.css`, `src/`: 게임 본체 (`data.js` 재료·레시피, `store.js` 매장, `gather.js` 재료 모으기, `main.js` 화면 전환·창)
+- `vendor/`: Three.js(MIT, `THREE-LICENSE.txt`), GSAP(GSAP 표준 라이선스: https://gsap.com/standard-license)
+- `assets/`: 그림과 글꼴. 출처는 `assets/CREDITS.txt` 참고
