@@ -13,7 +13,7 @@ const CUST_Y = 2.3;            // 손님 머리 높이(말풍선 기준)
 const CUST_BASE = 0.78;        // 손님 고양이 몸 높이(앞발이 카운터 위에 놓이게)
 const CUST_Z = -2.7;           // 손님 고양이 위치(카운터 뒤)
 const DEBUG_PATIENCE = Number(new URLSearchParams(window.location.search).get('patience')) || 0; // 확인용: ?patience=8
-const PATIENCE = DEBUG_PATIENCE || 60;   // 1분 넘게 기다리면 화나서 떠나요
+const PATIENCE = DEBUG_PATIENCE || 75;   // 줄 선 손님은 75초 넘게 기다리면 화나서 떠나요 (맨 앞 손님은 시간이 멈춰요)
 const WORRY_AT = PATIENCE / 3;
 const ANGRY_AT = PATIENCE * 0.58;
 const ING_BY_ID = Object.fromEntries(INGREDIENTS.map((d) => [d.id, d]));
@@ -257,6 +257,14 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
     return list[Math.floor(Math.random() * list.length)];
   }
 
+  let orderNo = 0;
+  // 맨 앞(가장 먼저 온) 손님: 이 손님만 주문을 받고 음식을 받을 수 있어요
+  function frontCustomer() {
+    let f = null;
+    customers.forEach((c) => { if (c && c.status !== 'leaving' && (!f || c.order < f.order)) f = c; });
+    return f;
+  }
+
   function makeCustomer(seat) {
     const recipe = RECIPES[Math.floor(Math.random() * RECIPES.length)];
     const r = Math.random();
@@ -271,9 +279,9 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
     scene.add(cat.root);
     const el = document.createElement('div');
     el.className = 'cust';
-    el.innerHTML = '<div class="bubble"><div class="b-top"><img class="b-food" alt=""><span class="b-qty"></span></div><div class="b-need"></div><div class="gauge"><i></i></div></div><div class="hit"></div>';
+    el.innerHTML = '<div class="bubble"><div class="b-top"><img class="b-food" alt=""><span class="b-qty"></span></div><div class="b-need"></div><div class="gauge"><i></i></div><span class="qtag"></span></div><div class="hit"></div>';
     custLayer.appendChild(el);
-    const c = { seat, type, recipe, qty, remaining: qty, age: 0, mood: 'normal', cat, sprite: cat.root, el, phase: Math.random() * 6, status: 'arriving', say: 0 };
+    const c = { order: (orderNo += 1), seat, type, recipe, qty, remaining: qty, age: 0, mood: 'normal', cat, sprite: cat.root, el, phase: Math.random() * 6, status: 'arriving', say: 0 };
     el.querySelector('.b-food').src = recipe.img;
     el.querySelector('.b-qty').textContent = `×${qty}`;
     el.querySelector('.b-need').innerHTML = Object.entries(recipe.needs)
@@ -299,15 +307,29 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
     c.say = seconds;
   }
 
+  // 하트(감사) / 삐죽삐죽한 빨간 별(분노) 위에 글씨를 얹은 그림
+  function stampSvg(kind) {
+    if (kind === 'angry') {
+      const pts = [];
+      const n = 12;
+      for (let i = 0; i < n * 2; i += 1) {
+        const a = (i / (n * 2)) * Math.PI * 2 - Math.PI / 2;
+        const r = i % 2 === 0 ? 96 : 62 + (i % 4) * 4;
+        pts.push(`${(100 + Math.cos(a) * r).toFixed(1)},${(100 + Math.sin(a) * r * 0.92).toFixed(1)}`);
+      }
+      return `<svg viewBox="0 0 200 200" aria-hidden="true"><polygon points="${pts.join(' ')}" fill="#ff2e4d" stroke="#a80f2b" stroke-width="5" stroke-linejoin="round"/><text x="100" y="92" text-anchor="middle">장사 그따위로</text><text x="100" y="128" text-anchor="middle">하지마!!</text></svg>`;
+    }
+    return '<svg viewBox="0 0 200 190" aria-hidden="true"><path d="M100 176 C20 118 6 76 24 46 C42 16 84 22 100 54 C116 22 158 16 176 46 C194 76 180 118 100 176 Z" fill="#ff8fc0" stroke="#fff" stroke-width="7" stroke-linejoin="round"/><path d="M48 56 C54 44 68 40 78 46" fill="none" stroke="#ffd1e6" stroke-width="8" stroke-linecap="round"/><text x="100" y="84" text-anchor="middle">감사합니다</text><text x="100" y="118" text-anchor="middle">많이 파세요!</text></svg>';
+  }
+
   // 떠날 때 '감사합니다 / 화났다' 손글씨 그림이 부웅 부풀었다가 가라앉아요
   function stamp(c, kind) {
     const b = c.el.querySelector('.bubble');
     gsap.to(b, { opacity: 0, scale: 0.8, duration: 0.2, transformOrigin: '50% 100%', onComplete: () => { b.style.visibility = 'hidden'; } });
     c.say = 0;
-    const img = document.createElement('img');
+    const img = document.createElement('div');
     img.className = `stamp ${kind}`;
-    img.alt = '';
-    img.src = kind === 'angry' ? './assets/fx/angry.png' : './assets/fx/thanks.png';
+    img.innerHTML = stampSvg(kind);
     c.el.appendChild(img);
     // 화면 가장자리에서는 그림이 잘리지 않게 안쪽으로 밀어줘요
     const m = /translate3d\(([-\d.]+)px/.exec(c.el.style.transform || '');
@@ -368,7 +390,13 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
   function tapCustomer(c) {
     if (paused || c.status !== 'waiting') return;
     const have = state.goods[c.recipe.id] || 0;
-    if (have > 0) { serve(c); return; }
+    if (have > 0) {
+      if (frontCustomer() === c) { serve(c); return; }
+      hooks.toast('앞 손님부터 차례대로 받아요!');
+      haptic([15, 30, 15]);
+      gsap.fromTo(c.el.querySelector('.bubble'), { x: -6 }, { x: 0, duration: 0.4, ease: 'elastic.out(1, 0.3)' });
+      return;
+    }
     if (busy) { hooks.toast('지금 굽고 있어요!'); return; }
     clearBowl(true);
     const needs = c.recipe.needs;
@@ -389,9 +417,14 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
 
   function serveFromGoods(recipeId) {
     if (paused) return;
-    const waiting = customers.filter((c) => c && c.status === 'waiting' && c.recipe.id === recipeId).sort((a, b) => b.age - a.age);
-    if (!waiting.length) { hooks.toast('이 메뉴를 기다리는 손님이 없어요'); return; }
-    serve(waiting[0]);
+    const front = frontCustomer();
+    if (!front || front.status !== 'waiting') { hooks.toast('앞 손님이 자리에 앉으면 건네요'); return; }
+    if (front.recipe.id !== recipeId) {
+      hooks.toast(`지금은 앞 손님 차례예요: ${front.recipe.name}`);
+      haptic([15, 30, 15]);
+      return;
+    }
+    serve(front);
   }
 
   function screenToWorld(sx, sy, planeZ) {
@@ -777,7 +810,9 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
           return;
         }
         if (c.status !== 'waiting') return;
-        c.age += dt;
+        const isFront = frontCustomer() === c;
+        c.isFront = isFront;
+        if (!isFront) c.age += dt; // 맨 앞 손님의 참을성은 멈춰 있어요 (줄 선 손님만 화가 나요)
         const mood = c.age < WORRY_AT ? 'normal' : c.age < ANGRY_AT ? 'worried' : 'angry';
         if (mood !== c.mood) {
           c.mood = mood;
@@ -790,7 +825,13 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
           gauge.style.width = `${left * 100}%`;
           gauge.className = mood === 'angry' ? 'bad' : mood === 'worried' ? 'warn' : '';
         }
-        if (c.age >= PATIENCE) leave(c, 'angry');
+        const tag = c.el.querySelector('.qtag');
+        const secs = Math.max(0, Math.ceil(PATIENCE - c.age));
+        const label = isFront ? '주문 중' : `${secs}초`;
+        if (tag.textContent !== label) tag.textContent = label;
+        tag.className = `qtag ${isFront ? 'front' : secs <= 15 ? 'hot' : ''}`;
+        c.el.classList.toggle('front', isFront);
+        if (!isFront && c.age >= PATIENCE) leave(c, 'angry');
       });
     }
     customers.forEach((c) => {

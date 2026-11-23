@@ -203,3 +203,25 @@ export function coinPop(x, y) {
     gsap.fromTo(sp, { x: 0, y: 0, scale: 1, opacity: 1 }, { x: Math.cos(a) * 34, y: Math.sin(a) * 34, scale: 0.1, opacity: 0, duration: 0.55, delay: 0.5, ease: 'power2.out', onComplete: () => sp.remove() });
   }
 }
+
+// 짧은 '톡' 소리 (재료가 담겼을 때)
+export function blip(freq = 660, vol = 0.12, type = 'sine') {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    audioCtx = audioCtx || new AC();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const t0 = audioCtx.currentTime;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t0);
+    o.frequency.exponentialRampToValueAtTime(freq * 1.5, t0 + 0.07);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+    o.connect(g).connect(audioCtx.destination);
+    o.start(t0);
+    o.stop(t0 + 0.2);
+  } catch (e) { /* 소리 없이 진행 */ }
+}

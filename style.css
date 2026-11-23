@@ -432,6 +432,17 @@ h3 { font-size: 20px; margin-top: 14px; }
 .float.minus { color: #ff7a9c; }
 .float.plus { color: #3fb860; }
 
-/* 떠나는 손님의 손글씨 말풍선 */
-.stamp { --sw: min(calc(var(--bw) * 1.45), 230px); position: absolute; width: var(--sw); left: calc(var(--sw) / -2); bottom: calc(var(--h) / 2 + 16px); pointer-events: none; transform-origin: 50% 100%; filter: drop-shadow(0 3px 0 rgba(255,255,255,.9)) drop-shadow(0 0 6px rgba(255,255,255,.8)); }
-.stamp.thanks { filter: drop-shadow(0 0 5px #fff) drop-shadow(0 0 2px #fff); }
+/* 떠나는 손님의 말풍선: 분홍 하트 / 빨간 별 */
+.stamp { --sw: min(calc(var(--bw) * 1.45), 230px); position: absolute; width: var(--sw); left: calc(var(--sw) / -2); bottom: calc(var(--h) / 2 + 16px); pointer-events: none; transform-origin: 50% 100%; filter: drop-shadow(0 4px 0 rgba(107, 74, 58, .2)); }
+.stamp svg { display: block; width: 100%; height: auto; overflow: visible; }
+.stamp text { font-family: var(--font); font-size: 25px; fill: #fff; stroke: #c2185b; stroke-width: 6px; paint-order: stroke fill; stroke-linejoin: round; }
+.stamp.angry text { stroke: #8a0f24; font-size: 25px; }
+/* 줄 선 순서 표시 */
+.qtag { position: absolute; right: -4px; top: -12px; padding: 2px 8px; border-radius: 999px; font-size: 13px; line-height: 16px; background: #fff; color: var(--brown); box-shadow: 0 2px 0 rgba(107, 74, 58, .2), 0 0 0 2px #ffd1e0; }
+.qtag.front { background: #ff8fab; color: #fff; box-shadow: 0 2px 0 #e0577d, 0 0 0 2px #fff; }
+.qtag.hot { background: #ff5470; color: #fff; animation: qhot .5s ease-in-out infinite alternate; }
+@keyframes qhot { to { transform: scale(1.15); } }
+.cust.front .bubble { box-shadow: 0 4px 0 rgba(107, 74, 58, .16), 0 0 0 3px #ff8fab, 0 6px 14px rgba(107, 74, 58, .12); }
+.cust:not(.front) .bubble .b-food { opacity: .92; }
+#poopMsg { position: fixed; left: 50%; top: 38%; z-index: 40; width: max-content; max-width: 92vw; text-align: center; pointer-events: none;
+  font-size: clamp(30px, 9vw, 54px); color: #fff; -webkit-text-stroke: 8px #8b5a2b; paint-order: stroke fill; text-shadow: 0 5px 0 rgba(107, 74, 58, .35); line-height: 1.15; }

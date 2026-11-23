@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { INGREDIENTS, POOP, mat, mesh } from './data.js';
 import { createWorld } from './env.js';
 import { createCat } from './cat.js';
-import { createSparks, floatText, haptic, buzz, REDUCED } from './fx.js';
+import { createSparks, floatText, haptic, buzz, blip, REDUCED } from './fx.js';
 
 const gsap = window.gsap;
 const $ = (id) => document.getElementById(id);
@@ -11,6 +11,7 @@ const DURATION = 30;        // 제한 시간(초)
 const RIM_Y = 0.9;          // 바구니 입구 높이
 const SPAWN_Y = 10.5;       // 재료가 나타나는 높이
 const ITEM_SCALE = 1.3;     // 재료 크기 배율
+const DEBUG_POOP = new URLSearchParams(window.location.search).has('poop'); // 확인용: ?poop
 const SPEEDS = { slow: [3.4, 4.2], mid: [4.8, 5.8], fast: [6.4, 7.6], poop: [4.6, 5.6] };
 
 // 재료 모으기: 하늘에서 떨어지는 재료를 바구니로 받는 30초 게임
@@ -84,7 +85,6 @@ export function createGather({ renderer, onFinish }) {
   document.body.appendChild(flash);
   function hitEffect() {
     gsap.fromTo(flash, { opacity: 0.38 }, { opacity: 0, duration: 0.45, ease: 'power2.out' });
-    haptic([60, 40, 60]);
     if (REDUCED) return;
     const k = { v: 1 };
     gsap.to(k, {
@@ -92,6 +92,66 @@ export function createGather({ renderer, onFinish }) {
       onUpdate: () => { cam.shakeX = (Math.random() - 0.5) * 0.5 * k.v; cam.shakeY = (Math.random() - 0.5) * 0.4 * k.v; },
       onComplete: () => { cam.shakeX = 0; cam.shakeY = 0; },
     });
+  }
+  // 똥을 담았을 때 화면 가운데에 크게 나오는 문구
+  const poopMsg = document.createElement('div');
+  poopMsg.id = 'poopMsg';
+  poopMsg.textContent = '똥을 담으면 어떡해요!';
+  poopMsg.hidden = true;
+  document.body.appendChild(poopMsg);
+  gsap.set(poopMsg, { xPercent: -50, yPercent: -50 });
+  function showPoopMsg() {
+    gsap.killTweensOf(poopMsg);
+    poopMsg.hidden = false;
+    gsap.fromTo(poopMsg, { scale: 0.2, opacity: 0, rotation: -8 }, { scale: 1.15, opacity: 1, rotation: 0, duration: 0.28, ease: 'back.out(2.5)' });
+    gsap.to(poopMsg, { scale: 1, duration: 0.2, delay: 0.28 });
+    gsap.to(poopMsg, { opacity: 0, y: -30, duration: 0.4, delay: 1.3, onComplete: () => { poopMsg.hidden = true; gsap.set(poopMsg, { y: 0 }); } });
+  }
+
+  // 못 받은 달걀: 바닥에서 깨져서 노른자와 흰자가 흘러내려요
+  const splats = [];
+  const whiteMat = () => new THREE.MeshBasicMaterial({ color: 0xfffdf4, transparent: true, depthWrite: false });
+  function eggSplat(x) {
+    const g = new THREE.Group();
+    g.position.set(x, 0.05, 0.3);
+    g.rotation.x = -Math.PI / 2;
+    const rimMat = new THREE.MeshBasicMaterial({ color: 0xe8d3a8, transparent: true, depthWrite: false });
+    const rim = new THREE.Mesh(new THREE.CircleGeometry(0.74, 24), rimMat);
+    rim.scale.set(1.3, 1.0, 1);
+    rim.position.z = -0.002;
+    g.add(rim);
+    const wm = whiteMat();
+    const blob = new THREE.Mesh(new THREE.CircleGeometry(0.62, 24), wm);
+    blob.scale.set(1.25, 0.9, 1);
+    g.add(blob);
+    [[-0.7, 0.2, 0.3], [0.65, -0.25, 0.28], [0.2, 0.55, 0.22], [-0.3, -0.5, 0.2]].forEach(([dx, dy, r]) => {
+      const lobe = new THREE.Mesh(new THREE.CircleGeometry(r, 14), wm);
+      lobe.position.set(dx, dy, 0.001);
+      g.add(lobe);
+    });
+    const drip = new THREE.Mesh(new THREE.CircleGeometry(0.2, 12), wm);
+    drip.scale.set(0.8, 2.4, 1);
+    drip.position.set(0.05, -0.85, 0.001);
+    g.add(drip);
+    const ym = new THREE.MeshBasicMaterial({ color: 0xffc933, transparent: true, depthWrite: false });
+    const yolk = new THREE.Mesh(new THREE.CircleGeometry(0.28, 20), ym);
+    yolk.position.set(-0.1, 0.05, 0.003);
+    g.add(yolk);
+    const hl = new THREE.Mesh(new THREE.CircleGeometry(0.07, 10), new THREE.MeshBasicMaterial({ color: 0xfff3b0, transparent: true, depthWrite: false }));
+    hl.position.set(-0.2, 0.15, 0.004);
+    g.add(hl);
+    const ink = new THREE.MeshBasicMaterial({ color: 0x6b4a3a, transparent: true, depthWrite: false });
+    [-0.09, 0.09].forEach((ex) => { const e = new THREE.Mesh(new THREE.CircleGeometry(0.035, 8), ink); e.position.set(-0.1 + ex, 0.03, 0.005); g.add(e); });
+    g.scale.setScalar(0.2);
+    scene.add(g);
+    const mats = [wm, ym, hl.material, ink, rimMat];
+    gsap.to(g.scale, { x: ITEM_SCALE * 1.25, y: ITEM_SCALE * 1.25, z: 1, duration: 0.55, ease: 'elastic.out(1, 0.5)' });
+    gsap.to(drip.position, { y: -1.25, duration: 2.2, ease: 'power1.out' });
+    gsap.to(drip.scale, { y: 3.4, duration: 2.2, ease: 'power1.out' });
+    gsap.to(yolk.scale, { y: 0.8, x: 1.1, duration: 1.6 });
+    mats.forEach((m) => gsap.to(m, { opacity: 0, duration: 0.8, delay: 2.6 }));
+    gsap.delayedCall(3.5, () => scene.remove(g));
+    splats.push(g);
   }
   function squashBasket() {
     gsap.killTweensOf(basket.scale);
@@ -154,7 +214,7 @@ export function createGather({ renderer, onFinish }) {
   }
 
   function spawn() {
-    const wantPoop = elapsed > 2 && lastType !== 'poop' && Math.random() < 0.08;
+    const wantPoop = elapsed > 2 && lastType !== 'poop' && Math.random() < (DEBUG_POOP ? 0.45 : 0.08);
     const x = (Math.random() * 2 - 1) * playHalf;
     if (wantPoop) {
       lastType = 'poop';
@@ -188,7 +248,10 @@ export function createGather({ renderer, onFinish }) {
       poopHits += 1;
       resetCounts();
       burst(pos, 0x8b5a2b, 14);
-      floatText(camera, pos.clone().setY(RIM_Y + 1.6), '앗, 똥! 재료가 사라졌어요', 'bad');
+      floatText(camera, pos.clone().setY(RIM_Y + 1.6), '재료가 사라졌어요', 'bad');
+      showPoopMsg();
+      blip(180, 0.28, 'sawtooth');
+      haptic([140, 60, 140, 60, 200]);
       setMood('angry', 1.1);
       hitEffect();
       gsap.fromTo(basket.rotation, { z: 0.35 }, { z: 0, duration: 0.6, ease: 'elastic.out(1, 0.4)' });
@@ -199,7 +262,8 @@ export function createGather({ renderer, onFinish }) {
       gsap.fromTo(chip, { scale: 1.3 }, { scale: 1, duration: 0.4, ease: 'back.out(3)' });
       burst(pos, it.def.color, 9);
       floatText(camera, pos.clone().setY(RIM_Y + 1.4), `+1 ${it.def.name}`);
-      haptic(12);
+      haptic(40); // 담긴 느낌이 손에 오도록 또렷하게 한 번
+      blip(660 + Math.min(counts[it.def.id], 8) * 40, 0.12);
       setMood('happy', 0.5);
       squashBasket();
     }
@@ -211,6 +275,12 @@ export function createGather({ renderer, onFinish }) {
     items.splice(i, 1);
     it.shadow.visible = false;
     it.obj.position.y = 0.2;
+    if (it.def.id === 'egg') {
+      scene.remove(it.obj, it.shadow);
+      eggSplat(it.x);
+      burst(new THREE.Vector3(it.x, 0.3, 0.3), 0xffe9a0, 6, 0.6);
+      return;
+    }
     gsap.to(it.obj.scale, { y: ITEM_SCALE * 0.2, x: ITEM_SCALE * 1.3, z: ITEM_SCALE * 1.3, duration: 0.14, ease: 'power1.out', onComplete: () => scene.remove(it.obj, it.shadow) });
   }
 
