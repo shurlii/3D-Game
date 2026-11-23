@@ -1,3 +1,5 @@
-Free Pixel foods by ghostpixxells (itch.io) - CC0   (assets/foods)
-Jua font - SIL Open Font License 1.1               (assets/fonts, 사용한 글자만 추려서 포함)
-Cats: 모두 three.js 도형으로 직접 만든 3D 캐릭터 (src/cat.js). 픽셀 아트는 사용하지 않아요.
+Jua (Google Fonts) - SIL OFL 1.1   (assets/fonts/Jua-subset.woff, Jua-OFL.txt)
+Pacifico (Google Fonts) - SIL OFL 1.1   (assets/fonts/Pacifico-subset.woff, Pacifico-OFL.txt)
+Single Day (Google Fonts) - SIL OFL 1.1   (assets/fonts/SingleDay-subset.woff, SingleDay-OFL.txt)
+three.js - MIT, GSAP - 무료 표준 라이선스 (vendor/)
+고양이, 음식, 재료, 소품: 모두 three.js 도형으로 직접 만든 3D 모델이에요 (src/cat.js, src/data.js, src/decor.js). 외부 이미지는 쓰지 않아요.

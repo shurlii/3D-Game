@@ -1,8 +1,9 @@
 import * as THREE from 'three';
-import { INGREDIENTS, RECIPES, RECIPE_BY_ID, CAT_TYPES, CURRENCY, mat, mesh } from './data.js';
+import { INGREDIENTS, RECIPES, RECIPE_BY_ID, CAT_TYPES, CURRENCY, PRICES, BUNDLE_SIZE, QUICK_BUY, mat, mesh } from './data.js';
 import { createWorld } from './env.js';
 import { createCat } from './cat.js';
-import { createSparks, floatText, floatTextAtScreen, haptic, buzz, REDUCED } from './fx.js';
+import { createDecor } from './decor.js';
+import { createSparks, floatText, floatTextAtScreen, haptic, buzz, ding, coinPop, REDUCED } from './fx.js';
 
 const gsap = window.gsap;
 const $ = (id) => document.getElementById(id);
@@ -70,6 +71,8 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
   counter.add(mesh(new THREE.BoxGeometry(22.3, 0.14, 1.5), mat(0xfff6ea), 0, 1.17, 0.05));
   scene.add(counter);
 
+  const decor = createDecor(scene);
+
   // 영업 팻말
   function signTexture(text, bg) {
     const c = document.createElement('canvas');
@@ -107,14 +110,15 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
     x.font = '48px "Jua", sans-serif';
     x.fillStyle = '#f06b8e';
     x.fillText('M E O W   B A K E R Y', 512, 76);
-    let fs = 112;
-    x.font = `${fs}px "Jua", sans-serif`;
-    const tw = x.measureText('Butter Late Than Never').width;
-    if (tw > 880) { fs = Math.floor(fs * 880 / tw); x.font = `${fs}px "Jua", sans-serif`; }
+    const line = 'Butter Late Than Never...';
+    let fs = 118;
+    x.font = `${fs}px "Pacifico", "Jua", cursive`;
+    const tw = x.measureText(line).width;
+    if (tw > 900) { fs = Math.floor(fs * 900 / tw); x.font = `${fs}px "Pacifico", "Jua", cursive`; }
     x.lineWidth = 16; x.strokeStyle = '#ffffff';
-    x.strokeText('Butter Late Than Never', 512, 184);
+    x.strokeText(line, 512, 186);
     x.fillStyle = '#6b4a3a';
-    x.fillText('Butter Late Than Never', 512, 184);
+    x.fillText(line, 512, 186);
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 4;
@@ -152,23 +156,41 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
   const churu = new THREE.Group();
   churu.position.set(0, -0.92, 0);
   churu.visible = false;
+  churu.scale.setScalar(1.45);
   const churuTex = (() => {
     const c = document.createElement('canvas');
-    c.width = 128; c.height = 256;
+    c.width = 128; c.height = 320;
     const x = c.getContext('2d');
-    x.fillStyle = '#ffd54a'; x.fillRect(0, 0, 128, 256);
-    x.fillStyle = '#ff7aa0'; x.fillRect(0, 150, 128, 106);
-    x.fillStyle = '#fff'; x.font = '54px "Jua", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-    x.fillText('츄르', 64, 110);
+    x.fillStyle = '#e8344f'; x.fillRect(0, 0, 128, 320);
+    x.fillStyle = '#ff6b81'; x.fillRect(0, 0, 14, 320);
+    x.fillStyle = '#fff6ea';
+    x.beginPath(); x.roundRect(14, 70, 100, 190, 24); x.fill();
+    x.fillStyle = '#e8344f'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = '46px "Jua", sans-serif';
+    x.fillText('츄르', 64, 130);
+    x.font = '40px "Jua", sans-serif';
+    x.fillText('♥', 64, 190);
+    x.fillStyle = '#ffffff';
+    x.beginPath(); x.arc(30, 36, 6, 0, 7); x.fill();
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
     return t;
   })();
-  const churuBody = mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.62, 16), new THREE.MeshStandardMaterial({ map: churuTex, roughness: 0.5 }), 0, -0.1, 0);
+  // 짜요짜요처럼 길쭉하고 납작한 빨간 주머니
+  const churuRed = new THREE.MeshStandardMaterial({ color: 0xe8344f, roughness: 0.4 });
+  const churuLabel = new THREE.MeshStandardMaterial({ map: churuTex, roughness: 0.4 });
+  const churuBody = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.64, 0.11), [churuRed, churuRed, churuRed, churuRed, churuLabel, churuLabel]);
+  churuBody.position.set(0, -0.08, 0);
   churu.add(churuBody);
-  const churuPaste = mesh(new THREE.CylinderGeometry(0.075, 0.09, 0.22, 12), mat(0xffb27a), 0, -0.5, 0);
+  [-0.03, 0.04].forEach((dy) => churu.add(mesh(new THREE.BoxGeometry(0.28, 0.02, 0.06), mat(0xc2253c), 0, 0.27 + dy, 0)));
+  const churuTip = mesh(new THREE.CylinderGeometry(0.06, 0.11, 0.14, 4, 1), churuRed, 0, -0.47, 0);
+  churuTip.rotation.y = Math.PI / 4;
+  churuTip.scale.set(1, 1, 0.5);
+  churu.add(churuTip);
+  const churuPaste = mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.14, 10), mat(0xffb27a), 0, -0.58, 0);
   churu.add(churuPaste);
-  churu.add(mesh(new THREE.SphereGeometry(0.08, 12, 10), mat(0xffb27a), 0, -0.63, 0));
+  churu.add(mesh(new THREE.SphereGeometry(0.052, 10, 8), mat(0xffb27a), 0, -0.66, 0));
   chef.armR.add(churu);
   let celebrating = 0;       // 0이면 평소, 1이면 영업 종료 장면
   let celebrateFocus = 0;    // 카메라가 파티시에에게 다가가는 정도
@@ -196,13 +218,13 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
     return new THREE.CanvasTexture(c);
   })();
   const puffs = [];
-  for (let i = 0; i < 16; i += 1) {
+  for (let i = 0; i < 30; i += 1) {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex, transparent: true, depthWrite: false, opacity: 0 }));
     s.visible = false;
     scene.add(s);
     puffs.push(s);
   }
-  function steam(n = 1) {
+  function steam(n = 1, front = false) {
     for (let k = 0; k < n; k += 1) {
       const s = puffs.find((p) => !p.visible);
       if (!s) return;
@@ -210,7 +232,8 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
       const sc = oven.group.scale.x;
       s.visible = true;
       s.material.opacity = 0.8;
-      s.position.set(o.x + (Math.random() - 0.5) * 1.6 * sc, o.y + 2.5 * sc, o.z + 0.3);
+      if (front) s.position.set(o.x + (Math.random() - 0.5) * 1.5 * sc, o.y + 1.3 * sc, o.z + 1.1 * sc);
+      else s.position.set(o.x + (Math.random() - 0.5) * 1.6 * sc, o.y + 2.5 * sc, o.z + 0.3);
       s.scale.setScalar(0.5 * sc);
       gsap.to(s.position, { y: s.position.y + 1.8 * sc, x: s.position.x + (Math.random() - 0.5) * 0.8, duration: 1.4, ease: 'power1.out' });
       gsap.to(s.scale, { x: 1.5 * sc, y: 1.5 * sc, duration: 1.4 });
@@ -420,6 +443,8 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
   function buildShelf() {
     shelfEl.innerHTML = '';
     INGREDIENTS.forEach((d) => {
+      const slot = document.createElement('div');
+      slot.className = 'slot';
       const col = document.createElement('button');
       col.type = 'button';
       col.className = 'col';
@@ -427,14 +452,49 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
       col.setAttribute('aria-label', `${d.name} 넣기`);
       col.innerHTML = '<div class="stack"></div><span class="cnt">0</span>';
       col.addEventListener('click', () => addToBowl(d.id, col));
-      shelfEl.appendChild(col);
+      const price = PRICES[d.id] * (QUICK_BUY / BUNDLE_SIZE);
+      const buy = document.createElement('button');
+      buy.type = 'button';
+      buy.className = 'buy-mini';
+      buy.dataset.id = d.id;
+      buy.hidden = true;
+      buy.setAttribute('aria-label', `${d.name} ${QUICK_BUY}개 사기 (${price} 츄르)`);
+      buy.innerHTML = `<b>+${QUICK_BUY}</b><span>${price}</span>`;
+      buy.addEventListener('click', (e) => { e.stopPropagation(); quickBuy(d, price, buy); });
+      slot.append(col, buy);
+      shelfEl.appendChild(slot);
     });
+  }
+  // 비어 있는 재료를 선반에서 바로 10개 사요
+  function quickBuy(d, price, btn) {
+    const r = btn.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    if (state.wallet < price) {
+      hooks.toast(`츄르가 부족해요 (${price} 츄르 필요)`);
+      buzz(0.6);
+      gsap.fromTo(btn, { x: -3 }, { x: 0, duration: 0.4, ease: 'elastic.out(2, 0.3)' });
+      return;
+    }
+    state.wallet -= price;
+    state.inventory[d.id] = (state.inventory[d.id] || 0) + QUICK_BUY;
+    save();
+    ding();
+    coinPop(cx, cy);
+    floatTextAtScreen(cx, cy - 20, `-${price}`, 'minus');
+    haptic(15);
+    refreshShelf();
+    hooks.onWallet();
+    const col = shelfEl.querySelector(`.col[data-id="${d.id}"]`);
+    gsap.fromTo(col, { scale: 0.85 }, { scale: 1, duration: 0.5, delay: 0.35, ease: 'back.out(3)' });
+    gsap.delayedCall(0.4, () => floatTextAtScreen(cx, cy, `+${QUICK_BUY}`, 'plus'));
   }
   function refreshShelf() {
     INGREDIENTS.forEach((d) => {
       const col = shelfEl.querySelector(`[data-id="${d.id}"]`);
       const n = state.inventory[d.id] || 0;
       col.classList.toggle('empty', n === 0);
+      col.parentElement.querySelector('.buy-mini').hidden = n > 0;
       col.querySelector('.cnt').textContent = String(n);
       const stack = col.querySelector('.stack');
       const show = Math.min(n, 4);
@@ -532,8 +592,12 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
     if (!REDUCED) tl.to(oven.group.position, { x: op.x + 0.05, duration: 0.05, yoyo: true, repeat: 15, ease: 'none' }, 0.85);
     tl.call(() => {
       // 짠!
-      steam(5);
-      ovenGlow = 0;
+      steam(6);
+      ovenGlow = 0.6;
+      // 오븐 문을 활짝 열고 모락모락 김이 나요
+      gsap.to(oven.door.rotation, { x: 1.5, duration: 0.25, ease: 'back.out(2)' });
+      gsap.to(oven.door.rotation, { x: 0, duration: 0.3, delay: 1.1, ease: 'power2.in' });
+      gsap.to({}, { duration: 1.1, onUpdate() { if (Math.random() < 0.7) steam(1, true); } });
       whiskFast = 0;
       burst(mouth.clone().add(new THREE.Vector3(0, 0.6, 0)), 0xffe27a, 16, 1.2);
       burst(mouth.clone().add(new THREE.Vector3(0, 0.6, 0)), 0xff9fb8, 10, 1.2);
@@ -541,14 +605,15 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
       haptic([20, 30, 50]);
       buzz(1);
       const food = foodSprite(recipe.id, 0.1);
-      food.position.copy(mouth).add(new THREE.Vector3(0, 0.3, 0));
-      gsap.to(food.scale, { x: 1.7, y: 1.7, duration: 0.45, ease: 'elastic.out(1, 0.4)' });
-      gsap.to(food.position, { y: mouth.y + 1.1, duration: 0.45, ease: 'power2.out' });
+      food.position.copy(mouth).add(new THREE.Vector3(0, 0.1, 0.1));
+      gsap.to(food.scale, { x: 2.3, y: 2.3, duration: 0.6, ease: 'elastic.out(1, 0.45)' });
+      gsap.to(food.position, { y: mouth.y + 1.5, duration: 0.6, ease: 'power2.out' });
       gsap.to(chef.group.position, { y: 0.35, duration: 0.15, yoyo: true, repeat: 1, ease: 'power1.out' });
       gsap.to(chef.group.rotation, { y: Math.PI, duration: 0.35, delay: 0.1, ease: 'power2.out' });
       const gr = goodsEl.getBoundingClientRect();
       const dest = screenToWorld(gr.left + Math.min(gr.width, 60) / 2 + 20, gr.top + 25, 2.5);
-      gsap.delayedCall(0.75, () => {
+      gsap.delayedCall(1.1, () => {
+        ovenGlow = 0;
         arc(food, dest, 0.45, 1.2, 0, () => {
           scene.remove(food);
           state.goods[recipe.id] = (state.goods[recipe.id] || 0) + 1;
@@ -560,7 +625,7 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
         gsap.to(food.scale, { x: 0.8, y: 0.8, duration: 0.45 });
       });
     }, null, 1.65);
-    tl.to({}, { duration: 0.01 }, 2.05); // 굽기는 약 2초
+    tl.to({}, { duration: 0.01 }, 2.05); // 굽기는 약 2초 (완성품이 나오는 연출은 그 뒤로 조금 이어져요)
     tl.call(() => {}, null, 2.4);
   }
 
@@ -609,6 +674,7 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
     const sx = THREE.MathUtils.clamp(seatHalfVis * 0.64, 1.5, 3.4);
     seatX[0] = -sx; seatX[1] = 0; seatX[2] = sx;
     sign.position.x = sx * 0.5;
+    decor.place(sx, seatHalfVis);
     const ox = Math.min(3.6, cam.halfVis - 1.15);
     oven.group.position.x = -ox;
     const sc = THREE.MathUtils.clamp((cam.halfVis - 0.3) / 3.4, 0.6, 0.85);
@@ -626,6 +692,7 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
   const tmp = new THREE.Vector3();
   function update(dt, t) {
     world.update(dt, t);
+    decor.update(dt, t);
     // 파티시에: 가만히 있어도 살랑살랑
     if (!celebrating) chef.group.position.y += (0 - chef.group.position.y) * 0.2;
     chef.group.position.y += Math.sin(t * 2.2) * 0.0035;

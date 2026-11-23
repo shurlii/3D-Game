@@ -2,16 +2,17 @@ import * as THREE from 'three';
 
 export const CURRENCY = '츄르';
 export const BUNDLE_SIZE = 5; // 재료 사기 한 묶음의 개수
+export const QUICK_BUY = 10; // 선반에서 바로 사는 개수 (묶음 가격 × 2)
 // 재료 한 묶음(5개) 가격 (기존 Meow Bakery 2단계와 같은 값)
 export const PRICES = { milk: 2, egg: 1, butter: 2, sugar: 1, salt: 4, cocoa: 2, strawberry: 2, chocolate: 1, cream: 2 };
 
 // 메뉴(레시피)와 가격 (기존 Meow Bakery와 같은 값)
 export const RECIPES = [
-  { id: 'butterCookie', name: '진저브레드 쿠키', price: 3, needs: { butter: 2, sugar: 1, egg: 1 }, img: './assets/foods/52_gingerbreadman.png' },
-  { id: 'chocolateCookie', name: '초코칩 쿠키', price: 4, needs: { butter: 2, sugar: 2, egg: 1, chocolate: 3 }, img: './assets/foods/28_cookies.png' },
-  { id: 'madeleine', name: '에그타르트', price: 5, needs: { butter: 2, egg: 2, sugar: 2, milk: 1 }, img: './assets/foods/42_eggtart.png' },
-  { id: 'strawberryCake', name: '딸기 케이크', price: 8, needs: { strawberry: 3, cream: 2, egg: 2, sugar: 2, milk: 1 }, img: './assets/foods/90_strawberrycake.png' },
-  { id: 'sourdough', name: '식빵', price: 5, needs: { milk: 2, butter: 1, salt: 1 }, img: './assets/foods/65_loafbread.png' },
+  { id: 'butterCookie', name: '진저브레드 쿠키', price: 3, needs: { butter: 2, sugar: 1, egg: 1 } },
+  { id: 'chocolateCookie', name: '초코칩 쿠키', price: 4, needs: { butter: 2, sugar: 2, egg: 1, chocolate: 3 } },
+  { id: 'madeleine', name: '에그타르트', price: 5, needs: { butter: 2, egg: 2, sugar: 2, milk: 1 } },
+  { id: 'strawberryCake', name: '딸기 케이크', price: 8, needs: { strawberry: 3, cream: 2, egg: 2, sugar: 2, milk: 1 } },
+  { id: 'sourdough', name: '식빵', price: 5, needs: { milk: 2, butter: 1, salt: 1 } },
 ];
 export const RECIPE_BY_ID = Object.fromEntries(RECIPES.map((r) => [r.id, r]));
 export const CAT_TYPES = ['cheese', 'mackerel', 'tuxedo', 'white', 'gray', 'calico', 'black', 'siamese'];
@@ -159,3 +160,113 @@ export const POOP = { id: 'poop', name: '똥', color: '#8b5a2b', speed: 'poop', 
   return g;
 } };
 
+
+// ---------- 메뉴 3D 모델 (말풍선·선반·완성품 그림으로 쓰여요) ----------
+const faceOn = (g, y, z, spread = 0.11, size = 0.04) => {
+  const eyeM = new THREE.MeshBasicMaterial({ color: 0x3a2a24 });
+  const eye = new THREE.SphereGeometry(size, 10, 8);
+  g.add(mesh(eye, eyeM, -spread, y, z), mesh(eye, eyeM, spread, y, z));
+  const blush = new THREE.MeshBasicMaterial({ color: 0xff8fa8, transparent: true, opacity: 0.8 });
+  const bg = new THREE.CircleGeometry(size * 1.5, 12);
+  g.add(mesh(bg, blush, -spread * 1.9, y - size * 1.1, z - 0.005), mesh(bg, blush, spread * 1.9, y - size * 1.1, z - 0.005));
+  const smile = mesh(new THREE.TorusGeometry(size * 0.9, size * 0.28, 6, 12, Math.PI), eyeM, 0, y - size * 1.4, z);
+  smile.rotation.z = Math.PI;
+  g.add(smile);
+};
+const ball = (r, color, x, y, z, sx = 1, sy = 1, sz = 1) => {
+  const m = mesh(new THREE.SphereGeometry(r, 18, 14), mat(color), x, y, z);
+  m.scale.set(sx, sy, sz);
+  return m;
+};
+
+export const FOOD_MODELS = {
+  // 진저브레드 쿠키: 사람 모양 쿠키
+  butterCookie() {
+    const g = new THREE.Group();
+    const dough = 0xc98a4b;
+    g.add(ball(0.3, dough, 0, -0.12, 0, 1, 1.15, 0.38));
+    g.add(ball(0.27, dough, 0, 0.3, 0, 1, 0.95, 0.4));
+    const arm = (sx) => { const a = ball(0.14, dough, sx * 0.4, 0.0, 0, 1.5, 0.8, 0.4); a.rotation.z = sx * 0.55; return a; };
+    const leg = (sx) => { const a = ball(0.14, dough, sx * 0.2, -0.5, 0, 0.8, 1.6, 0.4); a.rotation.z = sx * 0.2; return a; };
+    g.add(arm(-1), arm(1), leg(-1), leg(1));
+    const ic = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    [0.08, -0.1, -0.28].forEach((y, i) => g.add(mesh(new THREE.SphereGeometry(0.05, 10, 8), i === 1 ? mat(0xff5d7a) : ic, 0, y, 0.15)));
+    // 리본 모양 아이싱
+    [-1, 1].forEach((s) => { const b = ball(0.07, 0xff5d7a, s * 0.1, 0.03, 0.16, 1.4, 1, 0.5); b.rotation.z = s * 0.4; g.add(b); });
+    faceOn(g, 0.32, 0.17, 0.1, 0.038);
+    // 손발 끝 아이싱
+    [[-0.52, -0.12], [0.52, -0.12]].forEach(([x, y]) => g.add(ball(0.04, 0xffffff, x, y + 0.03, 0.08)));
+    return g;
+  },
+  // 초코칩 쿠키: 동그랗고 통통
+  chocolateCookie() {
+    const g = new THREE.Group();
+    const cookie = new THREE.Group();
+    cookie.add(ball(0.5, 0xe0a860, 0, 0, 0, 1, 1, 0.42));
+    [[-0.28, 0.22], [0.3, 0.2], [-0.05, 0.34], [0.32, -0.12], [-0.34, -0.1], [0.05, -0.32], [-0.14, 0.02], [0.18, 0.08]].forEach(([x, y]) => {
+      const chip = ball(0.075, 0x4a2a1c, x, y, 0.19, 1.2, 1, 0.8);
+      chip.rotation.z = x * 2;
+      cookie.add(chip);
+    });
+    faceOn(cookie, -0.06, 0.205, 0.13, 0.04);
+    g.add(cookie);
+    g.rotation.z = 0.12;
+    return g;
+  },
+  // 에그타르트: 주름진 껍질과 노란 커스터드
+  madeleine() {
+    const g = new THREE.Group();
+    g.add(mesh(new THREE.CylinderGeometry(0.46, 0.3, 0.3, 14), mat(0xe6a65b), 0, -0.05, 0));
+    g.add(mesh(new THREE.TorusGeometry(0.43, 0.045, 8, 28), mat(0xd48f43), 0, 0.1, 0).rotateX(Math.PI / 2));
+    g.add(mesh(new THREE.CylinderGeometry(0.41, 0.41, 0.07, 28), mat(0xffd34d), 0, 0.1, 0));
+    [[-0.15, 0.1], [0.18, -0.06], [0.0, 0.2]].forEach(([x, z]) => g.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.012, 12), mat(0xc87a2d), x, 0.141, z)));
+    faceOn(g, -0.03, 0.43, 0.12, 0.04);
+    g.rotation.x = 0.7;
+    return g;
+  },
+  // 딸기 케이크: 폭신한 생크림과 딸기
+  strawberryCake() {
+    const g = new THREE.Group();
+    g.add(mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.2, 28), mat(0xffd9a0), 0, -0.3, 0));
+    g.add(mesh(new THREE.CylinderGeometry(0.52, 0.52, 0.08, 28), mat(0xffffff), 0, -0.16, 0));
+    g.add(mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.2, 28), mat(0xffd9a0), 0, -0.02, 0));
+    g.add(mesh(new THREE.CylinderGeometry(0.54, 0.52, 0.16, 28), mat(0xffffff), 0, 0.16, 0));
+    for (let i = 0; i < 8; i += 1) {
+      const a = (i / 8) * Math.PI * 2;
+      g.add(ball(0.1, 0xffffff, Math.sin(a) * 0.46, 0.27, Math.cos(a) * 0.46));
+    }
+    g.add(ball(0.17, 0xff4d6d, 0, 0.4, 0, 1, 1.05, 1));
+    const leaf = mesh(new THREE.ConeGeometry(0.1, 0.08, 6), mat(0x3fb860), 0, 0.56, 0);
+    leaf.rotation.x = Math.PI;
+    g.add(leaf);
+    g.add(ball(0.09, 0xff4d6d, 0.34, 0.33, 0.2), ball(0.09, 0xff4d6d, -0.3, 0.33, 0.28));
+    faceOn(g, -0.0, 0.51, 0.13, 0.04);
+    g.rotation.x = 0.1;
+    return g;
+  },
+  // 식빵: 단면이 보이는 통통한 식빵
+  sourdough() {
+    const g = new THREE.Group();
+    const bump = (r, w) => {
+      const sh = new THREE.Shape();
+      const hw = w;
+      sh.moveTo(-hw, -0.4);
+      sh.lineTo(hw, -0.4);
+      sh.lineTo(hw, 0.1);
+      sh.absarc(hw - r * 0.55, 0.1, r * 0.55, 0, Math.PI / 2, false);
+      sh.lineTo(-hw + r * 0.55, 0.1 + r * 0.55);
+      sh.absarc(-hw + r * 0.55, 0.1, r * 0.55, Math.PI / 2, Math.PI, false);
+      sh.lineTo(-hw, -0.4);
+      return sh;
+    };
+    const crust = new THREE.Mesh(new THREE.ExtrudeGeometry(bump(0.5, 0.5), { depth: 0.6, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 4, curveSegments: 14 }), mat(0xd88f3d));
+    crust.position.z = -0.3;
+    g.add(crust);
+    const crumb = new THREE.Mesh(new THREE.ExtrudeGeometry(bump(0.5, 0.44), { depth: 0.02, bevelEnabled: false, curveSegments: 14 }), mat(0xfff0c4));
+    crumb.position.z = 0.36;
+    crumb.position.y = 0.0;
+    g.add(crumb);
+    faceOn(g, 0.06, 0.4, 0.14, 0.042);
+    return g;
+  },
+};

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { INGREDIENTS, RECIPES, RECIPE_BY_ID, PRICES, BUNDLE_SIZE, CURRENCY } from './data.js';
+import { INGREDIENTS, RECIPES, RECIPE_BY_ID, PRICES, BUNDLE_SIZE, CURRENCY, FOOD_MODELS } from './data.js';
 import { makeIcons, haptic } from './fx.js';
 import { loadState, saveState } from './save.js';
 import { createGather } from './gather.js';
@@ -11,7 +11,7 @@ const $ = (id) => document.getElementById(id);
 // 귀여운 글꼴이 준비된 뒤에 재료 이름표와 현수막을 그려요 (최대 2초만 기다려요)
 try {
   await Promise.race([
-    Promise.all([document.fonts.load('40px "Jua"', '가나다라 Butter'), document.fonts.ready]),
+    Promise.all([document.fonts.load('40px "Jua"', '가나다라 Butter'), document.fonts.load('40px "Pacifico"', 'Butter'), document.fonts.ready]),
     new Promise((resolve) => setTimeout(resolve, 2000)),
   ]);
 } catch (e) { /* 글꼴을 못 불러오면 기본 글꼴로 보여요 */ }
@@ -37,25 +37,14 @@ function boot(renderer) {
 
   // ----- 그림(텍스처) -----
   const loader = new THREE.TextureLoader();
-  const pixelTex = (url) => {
-    const t = loader.load(url);
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.magFilter = THREE.NearestFilter;
-    t.minFilter = THREE.NearestFilter;
-    t.generateMipmaps = false;
-    return t;
-  };
-  const foodCache = new Map();
-  const foodTexture = (id) => {
-    if (!foodCache.has(id)) foodCache.set(id, pixelTex(RECIPE_BY_ID[id].img));
-    return foodCache.get(id);
-  };
-
   // 3D 재료 모델을 그림으로 바꿔서 말풍선과 선반에 씁니다
   const protos = {};
   INGREDIENTS.forEach((d) => { protos[d.id] = d.make(); });
+  RECIPES.forEach((r) => { protos[`food_${r.id}`] = FOOD_MODELS[r.id](); });
   const icons = makeIcons(renderer, protos);
+  RECIPES.forEach((r) => { r.img = icons[`food_${r.id}`]; }); // 픽셀 그림 대신 3D 그림
   const iconCache = new Map();
+  const foodTexture = (id) => iconTexture(`food_${id}`);
   const iconTexture = (id) => {
     if (!iconCache.has(id)) {
       const t = loader.load(icons[id]);
@@ -235,8 +224,8 @@ function boot(renderer) {
     panelBody.onclick = null;
     const earned = Math.max(0, r.revenue);
     const headline = earned > 0
-      ? `<h2>츄르 ${earned.toLocaleString('ko-KR')}개 값을<br>벌었어요!</h2>`
-      : '<h2>오늘은 츄르를<br>벌지 못했어요</h2>';
+      ? `<h2 class="big">츄르 ${earned.toLocaleString('ko-KR')}개 값을<br>벌었어요!</h2>`
+      : '<h2 class="big">오늘은 츄르를<br>벌지 못했어요</h2>';
     const note = earned > 0 ? '' : '<p class="how">내일은 더 잘할 수 있어요!</p>';
     openPanel(`<p class="eyebrow">영업 종료</p>${headline}${note}<p class="how">판매 ${money(r.gross)} − 놓친 손님 ${money(r.penalty)}<br>판매 ${r.served}개 · 놓친 손님 ${r.missed}명</p>${soldHtml(r.sold)}<p class="how">매출이 장부에 기록됐어요. 누적 매출 <b>${money(state.lifetime)}</b></p>`, true);
     store.celebrate(true, earned);

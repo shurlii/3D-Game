@@ -156,3 +156,50 @@ export function makeIcons(renderer, builders, size = 128) {
   rt.dispose();
   return out;
 }
+
+// 동전이 '띠링~' 하는 소리 (짧은 두 음, 소리를 못 내는 기기에서는 조용히 넘어가요)
+let audioCtx = null;
+export function ding() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    audioCtx = audioCtx || new AC();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const t0 = audioCtx.currentTime;
+    [[1318.5, 0], [1760, 0.09]].forEach(([f, d]) => {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0 + d);
+      g.gain.exponentialRampToValueAtTime(0.12, t0 + d + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.35);
+      o.connect(g).connect(audioCtx.destination);
+      o.start(t0 + d);
+      o.stop(t0 + d + 0.4);
+    });
+  } catch (e) { /* 소리 없이 진행 */ }
+}
+
+// 동전이 톡 튀어 올랐다가 반짝이며 사라지는 효과
+export function coinPop(x, y) {
+  const coin = document.createElement('div');
+  coin.className = 'coin-fx';
+  coin.textContent = '츄';
+  coin.style.left = `${x}px`;
+  coin.style.top = `${y}px`;
+  document.body.appendChild(coin);
+  const tl = gsap.timeline({ onComplete: () => coin.remove() });
+  tl.fromTo(coin, { y: 0, scale: 0.4, opacity: 0, rotationY: 0 }, { y: -46, scale: 1.1, opacity: 1, rotationY: 360, duration: 0.45, ease: 'back.out(2)' });
+  tl.to(coin, { y: -34, duration: 0.18, ease: 'power1.in' });
+  tl.to(coin, { y: -70, scale: 0.2, opacity: 0, duration: 0.3, ease: 'power2.in' });
+  for (let i = 0; i < 6; i += 1) {
+    const sp = document.createElement('div');
+    sp.className = 'coin-spark';
+    sp.style.left = `${x}px`;
+    sp.style.top = `${y - 40}px`;
+    document.body.appendChild(sp);
+    const a = (i / 6) * Math.PI * 2;
+    gsap.fromTo(sp, { x: 0, y: 0, scale: 1, opacity: 1 }, { x: Math.cos(a) * 34, y: Math.sin(a) * 34, scale: 0.1, opacity: 0, duration: 0.55, delay: 0.5, ease: 'power2.out', onComplete: () => sp.remove() });
+  }
+}
