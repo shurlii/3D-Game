@@ -25,13 +25,14 @@ try {
 
 if (!renderer || !gsap) {
   $('start').hidden = true;
+  $('loading').remove();
   $('nogl').hidden = false;
 } else {
   boot(renderer);
 }
 
 function boot(renderer) {
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
   const state = loadState();
   const save = () => saveState(state);
 
@@ -249,6 +250,8 @@ function boot(renderer) {
     const record = store.close();
     if (record) openDayResult(record);
   });
+  $('loading').remove();
+  $('start').hidden = false;
   gsap.from('#start .card', { y: 40, opacity: 0, scale: 0.92, duration: 0.6, ease: 'back.out(1.8)' });
 
   window.addEventListener('pagehide', () => { store.cancelBowl(); save(); });

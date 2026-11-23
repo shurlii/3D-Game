@@ -121,35 +121,34 @@ export function makeIcons(renderer, builders, size = 128) {
         px[i] = Math.min(255, px[i] * k); px[i + 1] = Math.min(255, px[i + 1] * k); px[i + 2] = Math.min(255, px[i + 2] * k);
       }
     }
-    const img = new ImageData(size, size);
-    const R1 = 5;
-    const R2 = 8;
-    const offs = [];
-    for (let dy = -R2; dy <= R2; dy += 1) for (let dx = -R2; dx <= R2; dx += 1) {
-      const d = Math.sqrt(dx * dx + dy * dy);
-      if (d <= R2) offs.push([dx, dy, d]);
-    }
-    for (let y = 0; y < size; y += 1) {
-      for (let x = 0; x < size; x += 1) {
-        const i = (y * size + x) * 4;
-        if (px[i + 3] >= 128) {
-          img.data[i] = px[i]; img.data[i + 1] = px[i + 1]; img.data[i + 2] = px[i + 2]; img.data[i + 3] = 255;
-          continue;
-        }
-        let nearest = 99;
-        for (const [dx, dy, d] of offs) {
-          const xx = x + dx;
-          const yy = y + dy;
-          if (xx < 0 || yy < 0 || xx >= size || yy >= size) continue;
-          if (px[(yy * size + xx) * 4 + 3] >= 128 && d < nearest) nearest = d;
-        }
-        if (nearest <= R1) { img.data[i] = 255; img.data[i + 1] = 255; img.data[i + 2] = 255; img.data[i + 3] = 255; }
-        else if (nearest <= R2) { img.data[i] = 107; img.data[i + 1] = 74; img.data[i + 2] = 58; img.data[i + 3] = 255; }
-      }
-    }
+    // 윤곽선은 캔버스가 직접 그려서 빠르게 만들어요 (픽셀을 하나씩 계산하지 않아요)
+    const src = document.createElement('canvas');
+    src.width = src.height = size;
+    src.getContext('2d').putImageData(new ImageData(px, size, size), 0, 0);
+    const tint = (color) => {
+      const t = document.createElement('canvas');
+      t.width = t.height = size;
+      const x = t.getContext('2d');
+      x.drawImage(src, 0, 0);
+      x.globalCompositeOperation = 'source-in';
+      x.fillStyle = color;
+      x.fillRect(0, 0, size, size);
+      return t;
+    };
+    const brown = tint('#6b4a3a');
+    const white = tint('#ffffff');
     const cv = document.createElement('canvas');
     cv.width = cv.height = size;
-    cv.getContext('2d').putImageData(img, 0, 0);
+    const cx = cv.getContext('2d');
+    const ring = (layer, r) => {
+      for (let k = 0; k < 20; k += 1) {
+        const a = (k / 20) * Math.PI * 2;
+        cx.drawImage(layer, Math.cos(a) * r, Math.sin(a) * r);
+      }
+    };
+    ring(brown, 8);
+    ring(white, 5);
+    cx.drawImage(src, 0, 0);
     out[id] = cv.toDataURL('image/png');
   });
   renderer.setClearColor(prevColor, prevAlpha);

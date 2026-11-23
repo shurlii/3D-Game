@@ -446,3 +446,7 @@ h3 { font-size: 20px; margin-top: 14px; }
 .cust:not(.front) .bubble .b-food { opacity: .92; }
 #poopMsg { position: fixed; left: 50%; top: 38%; z-index: 40; width: max-content; max-width: 92vw; text-align: center; pointer-events: none;
   font-size: clamp(30px, 9vw, 54px); color: #fff; -webkit-text-stroke: 8px #8b5a2b; paint-order: stroke fill; text-shadow: 0 5px 0 rgba(107, 74, 58, .35); line-height: 1.15; }
+
+#loading { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; align-content: center; gap: 10px; font-size: 22px; color: var(--brown); background: linear-gradient(#cfe8ff, #fff0f5); }
+#loading::before { content: ""; width: 54px; height: 54px; border-radius: 50%; border: 7px solid #ffd1e0; border-top-color: #ff8fab; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
