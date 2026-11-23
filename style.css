@@ -95,7 +95,7 @@ button { font-family: inherit; }
 .round:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--pink-deep); }
 
 /* ---------- 손님과 말풍선 ---------- */
-#custLayer { position: absolute; inset: 0; pointer-events: none; --bw: clamp(112px, 31vw, 168px); }
+#custLayer { position: absolute; inset: 0; pointer-events: none; --bw: 120px; }
 .cust { position: absolute; left: 0; top: 0; will-change: transform; --h: 150px; }
 .cust .hit { position: absolute; left: -48px; top: calc(var(--h) / -2); width: 96px; height: var(--h); cursor: pointer; }
 .bubble {
@@ -431,3 +431,7 @@ h3 { font-size: 20px; margin-top: 14px; }
 .coin-spark { position: fixed; z-index: 60; width: 9px; height: 9px; margin: -4px 0 0 -4px; border-radius: 50%; background: #ffe27a; box-shadow: 0 0 6px #fff; pointer-events: none; }
 .float.minus { color: #ff7a9c; }
 .float.plus { color: #3fb860; }
+
+/* 떠나는 손님의 손글씨 말풍선 */
+.stamp { --sw: min(calc(var(--bw) * 1.45), 230px); position: absolute; width: var(--sw); left: calc(var(--sw) / -2); bottom: calc(var(--h) / 2 + 16px); pointer-events: none; transform-origin: 50% 100%; filter: drop-shadow(0 3px 0 rgba(255,255,255,.9)) drop-shadow(0 0 6px rgba(255,255,255,.8)); }
+.stamp.thanks { filter: drop-shadow(0 0 5px #fff) drop-shadow(0 0 2px #fff); }

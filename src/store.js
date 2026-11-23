@@ -299,6 +299,30 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
     c.say = seconds;
   }
 
+  // 떠날 때 '감사합니다 / 화났다' 손글씨 그림이 부웅 부풀었다가 가라앉아요
+  function stamp(c, kind) {
+    const b = c.el.querySelector('.bubble');
+    gsap.to(b, { opacity: 0, scale: 0.8, duration: 0.2, transformOrigin: '50% 100%', onComplete: () => { b.style.visibility = 'hidden'; } });
+    c.say = 0;
+    const img = document.createElement('img');
+    img.className = `stamp ${kind}`;
+    img.alt = '';
+    img.src = kind === 'angry' ? './assets/fx/angry.png' : './assets/fx/thanks.png';
+    c.el.appendChild(img);
+    // 화면 가장자리에서는 그림이 잘리지 않게 안쪽으로 밀어줘요
+    const m = /translate3d\(([-\d.]+)px/.exec(c.el.style.transform || '');
+    const cx = m ? parseFloat(m[1]) : window.innerWidth / 2;
+    const w = Math.min(lastBw * 1.45, 230);
+    const off = Math.max(6 - (cx - w / 2), Math.min(0, window.innerWidth - 6 - (cx + w / 2)), 0) + Math.min(0, window.innerWidth - 6 - (cx + w / 2));
+    img.style.marginLeft = `${off}px`;
+    const tl = gsap.timeline();
+    tl.fromTo(img, { scale: 0.1, opacity: 0, rotation: kind === 'angry' ? -14 : 8 }, { scale: 1.55, opacity: 1, rotation: 0, duration: 0.32, ease: 'power3.out' });
+    tl.to(img, { scale: 1, duration: 0.45, ease: 'bounce.out' });
+    if (kind === 'angry' && !REDUCED) tl.to(img, { rotation: 3, duration: 0.06, yoyo: true, repeat: 9 }, '-=0.2');
+    else tl.to(img, { y: -6, duration: 0.5, yoyo: true, repeat: 1, ease: 'sine.inOut' }, '-=0.2');
+    tl.to(img, { opacity: 0, scale: 0.9, duration: 0.3 }, 1.35);
+  }
+
   function removeCustomer(c) {
     customers[c.seat] = null;
     seatTimer[c.seat] = 4 + Math.random() * 4;
@@ -315,13 +339,13 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
     const spr = c.sprite;
     if (kind === 'happy') {
       c.cat.setMood('happy');
-      sayText(c, '감사합니다<br>많이 파세요!', 1.5);
+      stamp(c, 'thanks');
       gsap.to(spr.position, { y: CUST_BASE + 0.45, duration: 0.2, yoyo: true, repeat: 3, ease: 'power1.out' });
       burst(spr.position.clone().add(new THREE.Vector3(0, 1.8, 0.8)), 0xff9fb8, 12);
       gsap.to(spr.position, { x: outX, duration: 1.1, delay: 1.5, ease: 'power1.in', onComplete: () => removeCustomer(c) });
     } else if (kind === 'angry') {
       c.cat.setMood('angry');
-      sayText(c, '장사 그따위로<br>하지마!', 1.4, 'bad');
+      stamp(c, 'angry');
       const penalty = c.recipe.price * c.remaining;
       state.wallet = Math.max(0, state.wallet - penalty);
       day.revenue -= penalty;
@@ -690,7 +714,17 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
 
   const camTarget = new THREE.Vector3();
   const tmp = new THREE.Vector3();
+  // 손님 말풍선이 서로 겹치지 않도록, 자리 사이 간격에 맞춰 폭을 정해요
+  let lastBw = 0;
+  function fitBubbles() {
+    const a = new THREE.Vector3(seatX[0], CUST_Y, CUST_Z).project(camera);
+    const b = new THREE.Vector3(seatX[1], CUST_Y, CUST_Z).project(camera);
+    const gap = Math.abs(b.x - a.x) * 0.5 * window.innerWidth;
+    const bw = Math.round(THREE.MathUtils.clamp(gap - 8, 96, 168));
+    if (bw !== lastBw) { lastBw = bw; custLayer.style.setProperty('--bw', `${bw}px`); }
+  }
   function update(dt, t) {
+    fitBubbles();
     world.update(dt, t);
     decor.update(dt, t);
     // 파티시에: 가만히 있어도 살랑살랑
