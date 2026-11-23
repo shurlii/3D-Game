@@ -74,8 +74,9 @@ export function createWorld(scene, { awningZ = -4.2, awningY = 6.6 } = {}) {
     scene.add(c);
     clouds.push(c);
   }
-  makeCloud(-10, -1.4, -1, 1.8); makeCloud(11, -1.8, 1, 2.1); makeCloud(-7, -2.6, 6, 1.6);
-  makeCloud(8, -2.8, 8, 1.4); makeCloud(-13, 5, -14, 2.8); makeCloud(12, 7, -16, 3.2);
+  // 아래쪽 구름은 윗부분이 바닥(y=0)보다 확실히 아래에 오도록 높이를 계산해요
+  const low = (x, z, s) => makeCloud(x, -0.9 - 1.25 * s, z, s);
+  low(-10, -1, 1.8); low(11, 1, 2.1); low(-7, 6, 1.6); low(8, 8, 1.4); low(-2, 14, 2.0); low(3, -15, 2.4); makeCloud(-13, 5, -14, 2.8); makeCloud(12, 7, -16, 3.2);
   makeCloud(0, 10, -22, 3.4); makeCloud(-18, 1, -18, 2.6); makeCloud(16, 2, -12, 2.4);
 
   return {

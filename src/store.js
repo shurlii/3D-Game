@@ -3,6 +3,7 @@ import { INGREDIENTS, RECIPES, RECIPE_BY_ID, CAT_TYPES, CURRENCY, PRICES, BUNDLE
 import { createWorld } from './env.js';
 import { createCat } from './cat.js';
 import { createDecor } from './decor.js';
+import { createLounge } from './lounge.js';
 import { createSparks, floatText, floatTextAtScreen, haptic, buzz, ding, coinPop, REDUCED } from './fx.js';
 
 const gsap = window.gsap;
@@ -72,6 +73,7 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
   scene.add(counter);
 
   const decor = createDecor(scene);
+  const lounge = createLounge(scene);
 
   // 영업 팻말
   function signTexture(text, bg) {
@@ -732,6 +734,7 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
     seatX[0] = -sx; seatX[1] = 0; seatX[2] = sx;
     sign.position.x = sx * 0.5;
     decor.place(sx, seatHalfVis);
+    lounge.place(seatHalfVis);
     const ox = Math.min(3.6, cam.halfVis - 1.15);
     oven.group.position.x = -ox;
     const sc = THREE.MathUtils.clamp((cam.halfVis - 0.3) / 3.4, 0.6, 0.85);
@@ -760,6 +763,7 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
     fitBubbles();
     world.update(dt, t);
     decor.update(dt, t);
+    lounge.update(dt, t);
     // 파티시에: 가만히 있어도 살랑살랑
     if (!celebrating) chef.group.position.y += (0 - chef.group.position.y) * 0.2;
     chef.group.position.y += Math.sin(t * 2.2) * 0.0035;

@@ -141,7 +141,11 @@ export function createGather({ renderer, onFinish }) {
     hl.position.set(-0.2, 0.15, 0.004);
     g.add(hl);
     const ink = new THREE.MeshBasicMaterial({ color: 0x6b4a3a, transparent: true, depthWrite: false });
-    [-0.09, 0.09].forEach((ex) => { const e = new THREE.Mesh(new THREE.CircleGeometry(0.035, 8), ink); e.position.set(-0.1 + ex, 0.03, 0.005); g.add(e); });
+    [-0.09, 0.09].forEach((ex) => { const e = new THREE.Mesh(new THREE.CircleGeometry(0.035, 8), ink); e.position.set(-0.1 + ex, 0.03, 0.005); e.renderOrder = 6; g.add(e); });
+    // 겹친 판들이 서로 가리지 않도록 그리는 순서를 정해요 (노른자가 맨 위)
+    rim.renderOrder = 1; blob.renderOrder = 2; drip.renderOrder = 2; yolk.renderOrder = 4; hl.renderOrder = 5;
+    g.children.forEach((ch) => { if (ch.renderOrder === 0) ch.renderOrder = 3; });
+    g.children.forEach((ch) => { ch.material.depthTest = false; });
     g.scale.setScalar(0.2);
     scene.add(g);
     const mats = [wm, ym, hl.material, ink, rimMat];
