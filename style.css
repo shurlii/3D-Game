@@ -85,7 +85,7 @@ button { font-family: inherit; }
 .round:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--pink-deep); }
 
 /* ---------- 손님과 말풍선 ---------- */
-#custLayer { position: absolute; inset: 0; pointer-events: none; --bw: clamp(104px, 29vw, 156px); }
+#custLayer { position: absolute; inset: 0; pointer-events: none; --bw: clamp(112px, 31vw, 168px); }
 .cust { position: absolute; left: 0; top: 0; will-change: transform; --h: 150px; }
 .cust .hit { position: absolute; left: -48px; top: calc(var(--h) / -2); width: 96px; height: var(--h); cursor: pointer; }
 .bubble {
@@ -108,7 +108,7 @@ button { font-family: inherit; }
 .b-qty { font-size: clamp(20px, 6vw, 28px); color: var(--pink-deep); }
 .b-need { display: flex; flex-wrap: wrap; justify-content: center; gap: 1px 6px; margin-top: 2px; }
 .need { display: inline-flex; }
-.need img { width: 20px; height: 20px; margin-right: -6px; }
+.need img { width: 25px; height: 25px; margin-right: -9px; }
 .gauge { height: 5px; margin-top: 5px; border-radius: 3px; background: #f1e4da; overflow: hidden; }
 .gauge i { display: block; height: 100%; width: 100%; background: #7bd88f; border-radius: 3px; }
 .gauge i.warn { background: #ffc94d; }
@@ -329,6 +329,9 @@ button { font-family: inherit; }
   text-align: center;
 }
 .card.wide { width: min(470px, 100%); }
+.card-wrap.bottom { place-items: end center; }
+.card-wrap.bottom .card { max-height: 50%; overflow: auto; }
+@media (min-aspect-ratio: 1/1) { .card-wrap.bottom { place-items: center end; padding-right: 4vw; } .card-wrap.bottom .card { width: min(380px, 44vw); max-height: 88%; } }
 .eyebrow { margin: 0 0 4px; color: var(--pink-deep); letter-spacing: .05em; }
 h1, h2, h3 { margin: 0 0 10px; line-height: 1.15; font-weight: 400; }
 h1 { font-size: 36px; }

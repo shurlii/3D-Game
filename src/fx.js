@@ -97,7 +97,7 @@ export function makeIcons(renderer, builders, size = 128) {
     obj.rotation.x = 0.18;
     const box = new THREE.Box3().setFromObject(obj);
     const dim = box.getSize(new THREE.Vector3());
-    const s = 1.5 / Math.max(dim.x, dim.y, dim.z);
+    const s = 1.85 / Math.max(dim.x, dim.y, dim.z);
     obj.scale.setScalar(s);
     box.setFromObject(obj);
     const c = box.getCenter(new THREE.Vector3());
@@ -109,14 +109,47 @@ export function makeIcons(renderer, builders, size = 128) {
     renderer.readRenderTargetPixels(rt, 0, 0, size, size, buf);
     renderer.setRenderTarget(null);
     sc.remove(obj);
+    // 위아래를 뒤집고, 가장자리 색을 바로잡은 뒤, 스티커처럼 윤곽선을 둘러서 또렷하게 만들어요
+    const px = new Uint8ClampedArray(size * size * 4);
+    for (let y = 0; y < size; y += 1) {
+      px.set(buf.subarray((size - 1 - y) * size * 4, (size - y) * size * 4), y * size * 4);
+    }
+    for (let i = 0; i < px.length; i += 4) {
+      const a = px[i + 3];
+      if (a > 0 && a < 255) {
+        const k = 255 / a;
+        px[i] = Math.min(255, px[i] * k); px[i + 1] = Math.min(255, px[i + 1] * k); px[i + 2] = Math.min(255, px[i + 2] * k);
+      }
+    }
+    const img = new ImageData(size, size);
+    const R1 = 5;
+    const R2 = 8;
+    const offs = [];
+    for (let dy = -R2; dy <= R2; dy += 1) for (let dx = -R2; dx <= R2; dx += 1) {
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d <= R2) offs.push([dx, dy, d]);
+    }
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        const i = (y * size + x) * 4;
+        if (px[i + 3] >= 128) {
+          img.data[i] = px[i]; img.data[i + 1] = px[i + 1]; img.data[i + 2] = px[i + 2]; img.data[i + 3] = 255;
+          continue;
+        }
+        let nearest = 99;
+        for (const [dx, dy, d] of offs) {
+          const xx = x + dx;
+          const yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= size || yy >= size) continue;
+          if (px[(yy * size + xx) * 4 + 3] >= 128 && d < nearest) nearest = d;
+        }
+        if (nearest <= R1) { img.data[i] = 255; img.data[i + 1] = 255; img.data[i + 2] = 255; img.data[i + 3] = 255; }
+        else if (nearest <= R2) { img.data[i] = 107; img.data[i + 1] = 74; img.data[i + 2] = 58; img.data[i + 3] = 255; }
+      }
+    }
     const cv = document.createElement('canvas');
     cv.width = cv.height = size;
-    const ctx = cv.getContext('2d');
-    const img = ctx.createImageData(size, size);
-    for (let y = 0; y < size; y += 1) {
-      img.data.set(buf.subarray((size - 1 - y) * size * 4, (size - y) * size * 4), y * size * 4);
-    }
-    ctx.putImageData(img, 0, 0);
+    cv.getContext('2d').putImageData(img, 0, 0);
     out[id] = cv.toDataURL('image/png');
   });
   renderer.setClearColor(prevColor, prevAlpha);

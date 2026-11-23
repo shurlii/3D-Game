@@ -1,13 +1,15 @@
 import * as THREE from 'three';
 import { INGREDIENTS, RECIPES, RECIPE_BY_ID, CAT_TYPES, CURRENCY, mat, mesh } from './data.js';
 import { createWorld } from './env.js';
+import { createCat } from './cat.js';
 import { createSparks, floatText, floatTextAtScreen, haptic, buzz, REDUCED } from './fx.js';
 
 const gsap = window.gsap;
 const $ = (id) => document.getElementById(id);
 
 const SEATS = 3;
-const CUST_Y = 2.0;            // 손님 고양이 높이
+const CUST_Y = 2.3;            // 손님 머리 높이(말풍선 기준)
+const CUST_BASE = 0.78;        // 손님 고양이 몸 높이(앞발이 카운터 위에 놓이게)
 const CUST_Z = -2.7;           // 손님 고양이 위치(카운터 뒤)
 const DEBUG_PATIENCE = Number(new URLSearchParams(window.location.search).get('patience')) || 0; // 확인용: ?patience=8
 const PATIENCE = DEBUG_PATIENCE || 60;   // 1분 넘게 기다리면 화나서 떠나요
@@ -21,94 +23,6 @@ const sameMap = (a, b) => {
   const kb = Object.keys(b).filter((k) => b[k] > 0);
   return ka.length === kb.length && ka.every((k) => a[k] === b[k]);
 };
-
-// 파티시에 고양이 (뒷모습)
-function buildChef() {
-  const g = new THREE.Group();
-  const orange = mat(0xffa24d), dark = mat(0xe07a1f), cream = mat(0xfff3dc), white = mat(0xffffff), pink = mat(0xff8fb1), silver = mat(0xcfd4dc, { metalness: 0.4, roughness: 0.35 });
-
-  const body = mesh(new THREE.SphereGeometry(1, 28, 20), orange, 0, 1.15, 0);
-  body.scale.set(1.0, 1.15, 0.9);
-  g.add(body);
-  [0.78, 1.15, 1.52].forEach((y, i) => {
-    const s = mesh(new THREE.SphereGeometry(1, 10, 8), dark, (i - 1) * 0.04, y, 0.8);
-    s.scale.set(0.42 - i % 2 * 0.08, 0.07, 0.12);
-    g.add(s);
-  });
-  const band = mesh(new THREE.TorusGeometry(0.97, 0.07, 10, 32), white, 0, 1.0, 0);
-  band.rotation.x = Math.PI / 2;
-  band.scale.set(1, 0.92, 1);
-  g.add(band);
-  const bowL = mesh(new THREE.ConeGeometry(0.2, 0.5, 4), pink, -0.3, 1.0, 0.95);
-  bowL.rotation.z = Math.PI / 2;
-  const bowR = mesh(new THREE.ConeGeometry(0.2, 0.5, 4), pink, 0.3, 1.0, 0.95);
-  bowR.rotation.z = -Math.PI / 2;
-  g.add(bowL, bowR, mesh(new THREE.SphereGeometry(0.13, 12, 10), pink, 0, 1.0, 0.97));
-
-  const head = new THREE.Group();
-  head.position.set(0, 2.55, 0);
-  const skull = mesh(new THREE.SphereGeometry(0.9, 28, 20), orange);
-  skull.scale.set(1.14, 1.0, 1.0);
-  head.add(skull);
-  [-0.55, 0.55].forEach((x) => {
-    const ear = mesh(new THREE.ConeGeometry(0.3, 0.55, 4), orange, x, 0.78, -0.05);
-    ear.rotation.z = -x * 0.7;
-    head.add(ear);
-    const inner = mesh(new THREE.ConeGeometry(0.17, 0.35, 4), pink, x * 1.02, 0.75, 0.16);
-    inner.rotation.z = -x * 0.7;
-    head.add(inner);
-  });
-  [-0.28, 0, 0.28].forEach((x, i) => {
-    const s = mesh(new THREE.SphereGeometry(1, 8, 6), dark, x, 0.28 - (i === 1 ? 0.04 : 0), 0.88);
-    s.scale.set(0.07, 0.22, 0.05);
-    head.add(s);
-  });
-  const hat = new THREE.Group();
-  hat.position.set(0, 0.82, 0);
-  hat.add(mesh(new THREE.CylinderGeometry(0.62, 0.66, 0.34, 24), white, 0, 0, 0));
-  hat.add(mesh(new THREE.SphereGeometry(0.58, 20, 14), white, 0, 0.5, 0));
-  [[-0.42, 0.42, 0], [0.42, 0.42, 0], [0, 0.45, 0.4], [0, 0.45, -0.4]].forEach(([x, y, z]) => hat.add(mesh(new THREE.SphereGeometry(0.38, 16, 12), white, x, y, z)));
-  hat.add(mesh(new THREE.CylinderGeometry(0.665, 0.665, 0.07, 24), pink, 0, -0.1, 0));
-  head.add(hat);
-  g.add(head);
-
-  const tailPivot = new THREE.Group();
-  tailPivot.position.set(0.25, 0.7, 0.7);
-  const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.35, -0.1, 0.45), new THREE.Vector3(0.85, 0.25, 0.55), new THREE.Vector3(1.05, 0.85, 0.3)]);
-  tailPivot.add(mesh(new THREE.TubeGeometry(curve, 20, 0.15, 10), orange));
-  tailPivot.add(mesh(new THREE.SphereGeometry(0.17, 12, 10), dark, 1.05, 0.88, 0.3));
-  g.add(tailPivot);
-
-  [-0.45, 0.45].forEach((x) => {
-    const f = mesh(new THREE.SphereGeometry(0.3, 14, 10), cream, x, 0.2, 0.18);
-    f.scale.set(1, 0.7, 1.35);
-    g.add(f);
-  });
-
-  const armL = mesh(new THREE.CapsuleGeometry(0.17, 0.5, 6, 12), orange, -1.0, 1.5, 0.05);
-  armL.rotation.z = 0.45;
-  g.add(armL);
-
-  const armR = new THREE.Group();
-  armR.position.set(0.95, 1.75, 0);
-  const upper = mesh(new THREE.CapsuleGeometry(0.17, 0.5, 6, 12), orange, 0.25, 0.3, -0.1);
-  upper.rotation.z = -0.9;
-  armR.add(upper);
-  const whisk = new THREE.Group();
-  whisk.position.set(0.62, 0.78, -0.12);
-  whisk.rotation.z = -0.25;
-  whisk.add(mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.5, 10), silver, 0, 0, 0));
-  for (let i = 0; i < 4; i += 1) {
-    const w = mesh(new THREE.TorusGeometry(0.17, 0.014, 6, 20), silver, 0, 0.5, 0);
-    w.scale.set(0.5, 1.5, 1);
-    w.rotation.y = (i * Math.PI) / 4;
-    whisk.add(w);
-  }
-  armR.add(whisk);
-  g.add(armR);
-
-  return { group: g, head, tail: tailPivot, armR, whisk, hat };
-}
 
 // 오븐
 function buildOven() {
@@ -137,12 +51,12 @@ function buildOven() {
   return { group: g, glowMat, door: hinge };
 }
 
-export function createStore({ renderer, state, icons, catTexture, foodTexture, iconTexture, save, hooks }) {
+export function createStore({ renderer, state, icons, foodTexture, iconTexture, save, hooks }) {
   const scene = new THREE.Scene();
   const world = createWorld(scene, { awningZ: -5, awningY: 7.4 });
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 90);
   const burst = createSparks(scene, 64);
-  const cam = { z: 11, halfVis: 5 };
+  const cam = { z: 11, halfVis: 5, focus: 0 };
   let visible = false;
   let paused = false;
   let isOpen = false;
@@ -178,11 +92,93 @@ export function createStore({ renderer, state, icons, catTexture, foodTexture, i
   sign.scale.setScalar(0.6);
   scene.add(sign);
 
-  // 파티시에와 오븐
-  const chef = buildChef();
+  // 현수막 (대롱대롱 매달려 있어요)
+  const bannerTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = 1024; c.height = 300;
+    const x = c.getContext('2d');
+    x.fillStyle = '#fff6ea';
+    x.beginPath(); x.roundRect(8, 8, 1008, 284, 54); x.fill();
+    x.lineWidth = 14; x.strokeStyle = '#ff8fab'; x.stroke();
+    x.setLineDash([2, 34]); x.lineCap = 'round'; x.lineWidth = 10; x.strokeStyle = '#ffd1e0';
+    x.beginPath(); x.roundRect(34, 34, 956, 232, 36); x.stroke();
+    x.setLineDash([]);
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+    x.font = '48px "Jua", sans-serif';
+    x.fillStyle = '#f06b8e';
+    x.fillText('M E O W   B A K E R Y', 512, 76);
+    let fs = 112;
+    x.font = `${fs}px "Jua", sans-serif`;
+    const tw = x.measureText('Butter Late Than Never').width;
+    if (tw > 880) { fs = Math.floor(fs * 880 / tw); x.font = `${fs}px "Jua", sans-serif`; }
+    x.lineWidth = 16; x.strokeStyle = '#ffffff';
+    x.strokeText('Butter Late Than Never', 512, 184);
+    x.fillStyle = '#6b4a3a';
+    x.fillText('Butter Late Than Never', 512, 184);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  })();
+  const banner = new THREE.Group();
+  banner.position.set(0, 6.95, -3.4);
+  banner.add(mesh(new THREE.PlaneGeometry(6.4, 1.875), new THREE.MeshBasicMaterial({ map: bannerTex, transparent: true, side: THREE.DoubleSide }), 0, -1.3, 0));
+  [-2.5, 2.5].forEach((x) => {
+    banner.add(mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.42, 6), mat(0xd9a066), x, -0.17, 0));
+    banner.add(mesh(new THREE.SphereGeometry(0.07, 8, 6), mat(0xff8fab), x, 0, 0));
+  });
+  scene.add(banner);
+
+  // 파티시에 (뒷모습). 거품기를 들고 있고, 영업이 끝나면 앞을 보고 츄르를 먹어요.
+  const chefCat = createCat('baker');
+  const chef = { group: chefCat.root, head: chefCat.head, tail: chefCat.tail, armR: chefCat.armR, armL: chefCat.armL };
+  chefCat.g.position.y = 0.5;
+  chef.group.rotation.y = Math.PI;
   chef.group.position.set(0, 0, 3.0);
-  chef.group.scale.setScalar(1);
   scene.add(chef.group);
+  const armBase = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, -1, 0), new THREE.Vector3(-0.45, 0.75, 0.5).normalize());
+  const silver = mat(0xdfe3ea, { metalness: 0.4, roughness: 0.3 });
+  const whisk = new THREE.Group();
+  whisk.position.set(0, -0.92, 0);
+  whisk.add(mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.5, 10), silver, 0, -0.2, 0));
+  for (let i = 0; i < 4; i += 1) {
+    const w = mesh(new THREE.TorusGeometry(0.17, 0.016, 6, 20), silver, 0, -0.62, 0);
+    w.scale.set(0.5, 1.6, 1);
+    w.rotation.y = (i * Math.PI) / 4;
+    whisk.add(w);
+  }
+  chef.armR.add(whisk);
+  // 츄르 (영업 종료 때)
+  const churu = new THREE.Group();
+  churu.position.set(0, -0.92, 0);
+  churu.visible = false;
+  const churuTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = 128; c.height = 256;
+    const x = c.getContext('2d');
+    x.fillStyle = '#ffd54a'; x.fillRect(0, 0, 128, 256);
+    x.fillStyle = '#ff7aa0'; x.fillRect(0, 150, 128, 106);
+    x.fillStyle = '#fff'; x.font = '54px "Jua", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText('츄르', 64, 110);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  const churuBody = mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.62, 16), new THREE.MeshStandardMaterial({ map: churuTex, roughness: 0.5 }), 0, -0.1, 0);
+  churu.add(churuBody);
+  const churuPaste = mesh(new THREE.CylinderGeometry(0.075, 0.09, 0.22, 12), mat(0xffb27a), 0, -0.5, 0);
+  churu.add(churuPaste);
+  churu.add(mesh(new THREE.SphereGeometry(0.08, 12, 10), mat(0xffb27a), 0, -0.63, 0));
+  chef.armR.add(churu);
+  let celebrating = 0;       // 0이면 평소, 1이면 영업 종료 장면
+  let celebrateFocus = 0;    // 카메라가 파티시에에게 다가가는 정도
+  let eating = false;
+  let eatTimer = 0;
+  const downVec = new THREE.Vector3(0, -1, 0);
+  const eatDir = new THREE.Vector3(0.92, 0.36, 0.81).normalize();
+  const qEat = new THREE.Quaternion();
+  const qWob = new THREE.Quaternion();
+  const eul = new THREE.Euler();
   const oven = buildOven();
   oven.group.position.set(-3.6, 0, 2.8);
   scene.add(oven.group);
@@ -241,26 +237,27 @@ export function createStore({ renderer, state, icons, catTexture, foodTexture, i
   function makeCustomer(seat) {
     const recipe = RECIPES[Math.floor(Math.random() * RECIPES.length)];
     const r = Math.random();
-    const qty = r < 0.4 ? 1 : r < 0.8 ? 2 : 3;
+    const qty = r < 0.7 ? 1 : r < 0.95 ? 2 : 3;   // 대부분 1개만 주문해요
     const type = pickCatType();
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: catTexture(type, 'normal'), transparent: true, alphaTest: 0.05 }));
-    sprite.scale.set(1.9, 2.5, 1);
+    const cat = createCat(type);
+    cat.root.scale.setScalar(1.0);
+    cat.armL.rotation.set(-1.15, 0, 0.1);
+    cat.armR.rotation.set(-1.15, 0, -0.1);
     const startX = (seat === 2 ? 1 : seat === 0 ? -1 : (Math.random() < 0.5 ? -1 : 1)) * (seatHalfVis + 2);
-    sprite.position.set(startX, CUST_Y, CUST_Z);
-    scene.add(sprite);
+    cat.root.position.set(startX, CUST_BASE, CUST_Z);
+    scene.add(cat.root);
     const el = document.createElement('div');
     el.className = 'cust';
     el.innerHTML = '<div class="bubble"><div class="b-top"><img class="b-food" alt=""><span class="b-qty"></span></div><div class="b-need"></div><div class="gauge"><i></i></div></div><div class="hit"></div>';
     custLayer.appendChild(el);
-    const c = { seat, type, recipe, qty, remaining: qty, age: 0, mood: 'normal', sprite, el, phase: Math.random() * 6, status: 'arriving', say: 0 };
+    const c = { seat, type, recipe, qty, remaining: qty, age: 0, mood: 'normal', cat, sprite: cat.root, el, phase: Math.random() * 6, status: 'arriving', say: 0 };
     el.querySelector('.b-food').src = recipe.img;
     el.querySelector('.b-qty').textContent = `×${qty}`;
     el.querySelector('.b-need').innerHTML = Object.entries(recipe.needs)
       .map(([id, n]) => `<span class="need">${`<img alt="" src="${icons[id]}">`.repeat(n)}</span>`).join('');
     el.querySelector('.bubble').style.opacity = '0';
     el.addEventListener('click', () => tapCustomer(c));
-    c.sprite.userData.targetX = seatX[seat];
-    gsap.to(sprite.position, { x: seatX[seat], duration: 1.3, ease: 'power1.out', onComplete: () => {
+    gsap.to(cat.root.position, { x: seatX[seat], duration: 1.3, ease: 'power1.out', onComplete: () => {
       if (c.status !== 'arriving') return;
       c.status = 'waiting';
       gsap.fromTo(el.querySelector('.bubble'), { scale: 0.3, opacity: 0, transformOrigin: '50% 100%' }, { scale: 1, opacity: 1, duration: 0.45, ease: 'back.out(2.2)' });
@@ -294,13 +291,13 @@ export function createStore({ renderer, state, icons, catTexture, foodTexture, i
     const outX = dir * (seatHalfVis + 3);
     const spr = c.sprite;
     if (kind === 'happy') {
-      spr.material.map = catTexture(c.type, 'happy');
+      c.cat.setMood('happy');
       sayText(c, '감사합니다<br>많이 파세요!', 1.5);
-      gsap.to(spr.position, { y: spr.position.y + 0.45, duration: 0.2, yoyo: true, repeat: 3, ease: 'power1.out' });
-      burst(spr.position.clone().add(new THREE.Vector3(0, 0.6, 0.5)), 0xff9fb8, 12);
+      gsap.to(spr.position, { y: CUST_BASE + 0.45, duration: 0.2, yoyo: true, repeat: 3, ease: 'power1.out' });
+      burst(spr.position.clone().add(new THREE.Vector3(0, 1.8, 0.8)), 0xff9fb8, 12);
       gsap.to(spr.position, { x: outX, duration: 1.1, delay: 1.5, ease: 'power1.in', onComplete: () => removeCustomer(c) });
     } else if (kind === 'angry') {
-      spr.material.map = catTexture(c.type, 'angry');
+      c.cat.setMood('angry');
       sayText(c, '장사 그따위로<br>하지마!', 1.4, 'bad');
       const penalty = c.recipe.price * c.remaining;
       state.wallet = Math.max(0, state.wallet - penalty);
@@ -309,7 +306,7 @@ export function createStore({ renderer, state, icons, catTexture, foodTexture, i
       day.missed += 1;
       hooks.onWallet();
       save();
-      floatText(camera, spr.position.clone().add(new THREE.Vector3(0, 1.6, 0.5)), `-${penalty} ${CURRENCY}`, 'bad');
+      floatText(camera, spr.position.clone().add(new THREE.Vector3(0, 2.6, 0.5)), `-${penalty} ${CURRENCY}`, 'bad');
       haptic([90, 50, 90]);
       buzz(1.3);
       if (!REDUCED) gsap.to(spr.position, { x: `+=${0.12}`, duration: 0.05, yoyo: true, repeat: 15 });
@@ -385,7 +382,7 @@ export function createStore({ renderer, state, icons, catTexture, foodTexture, i
     const goodEl = document.querySelector(`.good[data-id="${id}"]`);
     const r = goodEl ? goodEl.getBoundingClientRect() : { left: window.innerWidth / 2, top: window.innerHeight - 100, width: 0, height: 0 };
     const from = screenToWorld(r.left + r.width / 2, r.top + r.height / 2, 2.5);
-    const target = c.sprite.position.clone().add(new THREE.Vector3(0, 0.3, 0.6));
+    const target = c.sprite.position.clone().add(new THREE.Vector3(0, 1.4, 0.9));
     for (let i = 0; i < n; i += 1) {
       const s = foodSprite(id, 1.0);
       s.position.copy(from);
@@ -396,10 +393,10 @@ export function createStore({ renderer, state, icons, catTexture, foodTexture, i
     }
     gsap.delayedCall(0.55 + (n - 1) * 0.14, () => {
       if (c.status === 'leaving') return;
-      c.sprite.material.map = catTexture(c.type, 'happy');
-      gsap.fromTo(c.sprite.position, { y: CUST_Y }, { y: CUST_Y + 0.45, duration: 0.18, yoyo: true, repeat: 1, ease: 'power1.out' });
-      floatText(camera, c.sprite.position.clone().add(new THREE.Vector3(0, 1.3, 0.6)), `+${money} ${CURRENCY}`);
-      burst(c.sprite.position.clone().add(new THREE.Vector3(0, 0.8, 0.6)), 0xffe27a, 10);
+      c.cat.setMood('happy');
+      gsap.fromTo(c.sprite.position, { y: CUST_BASE }, { y: CUST_BASE + 0.45, duration: 0.18, yoyo: true, repeat: 1, ease: 'power1.out' });
+      floatText(camera, c.sprite.position.clone().add(new THREE.Vector3(0, 3.3, 0.6)), `+${money} ${CURRENCY}`);
+      burst(c.sprite.position.clone().add(new THREE.Vector3(0, 2.0, 0.9)), 0xffe27a, 10);
       haptic([15, 25, 30]);
       buzz(0.8);
       if (c.remaining <= 0) leave(c, 'happy');
@@ -516,7 +513,7 @@ export function createStore({ renderer, state, icons, catTexture, foodTexture, i
     const mouth = new THREE.Vector3(op.x, 1.3 * os, op.z + 1.0);
     const tl = gsap.timeline({ onComplete: () => { busy = false; } });
     tl.to(oven.door.rotation, { x: 1.35, duration: 0.2, ease: 'power2.out' }, 0);
-    tl.to(chef.group.rotation, { y: -0.45, duration: 0.25, ease: 'power2.out' }, 0);
+    tl.to(chef.group.rotation, { y: Math.PI + 0.45, duration: 0.25, ease: 'power2.out' }, 0);
     tl.call(() => { whiskFast = 1; }, null, 0);
     list.slice(0, 9).forEach((id, i) => {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture(id), transparent: true }));
@@ -548,7 +545,7 @@ export function createStore({ renderer, state, icons, catTexture, foodTexture, i
       gsap.to(food.scale, { x: 1.7, y: 1.7, duration: 0.45, ease: 'elastic.out(1, 0.4)' });
       gsap.to(food.position, { y: mouth.y + 1.1, duration: 0.45, ease: 'power2.out' });
       gsap.to(chef.group.position, { y: 0.35, duration: 0.15, yoyo: true, repeat: 1, ease: 'power1.out' });
-      gsap.to(chef.group.rotation, { y: 0, duration: 0.35, delay: 0.1, ease: 'power2.out' });
+      gsap.to(chef.group.rotation, { y: Math.PI, duration: 0.35, delay: 0.1, ease: 'power2.out' });
       const gr = goodsEl.getBoundingClientRect();
       const dest = screenToWorld(gr.left + Math.min(gr.width, 60) / 2 + 20, gr.top + 25, 2.5);
       gsap.delayedCall(0.75, () => {
@@ -616,7 +613,11 @@ export function createStore({ renderer, state, icons, catTexture, foodTexture, i
     oven.group.position.x = -ox;
     const sc = THREE.MathUtils.clamp((cam.halfVis - 0.3) / 3.4, 0.6, 0.85);
     oven.group.scale.setScalar(sc);
-    chef.group.scale.setScalar(THREE.MathUtils.clamp(0.45 + cam.halfVis * 0.1, 0.62, 0.8));
+    chef.group.scale.setScalar(THREE.MathUtils.clamp(0.44 + cam.halfVis * 0.09, 0.6, 0.85));
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    if (aspect < 1) camera.setViewOffset(w, h, 0, -Math.round(h * 0.07), w, h); // 위쪽에 현수막 자리를 만들어요
+    else camera.clearViewOffset();
     camera.updateProjectionMatrix();
     customers.forEach((c) => { if (c && c.status === 'waiting') c.sprite.position.x = seatX[c.seat]; });
   }
@@ -626,15 +627,37 @@ export function createStore({ renderer, state, icons, catTexture, foodTexture, i
   function update(dt, t) {
     world.update(dt, t);
     // 파티시에: 가만히 있어도 살랑살랑
-    chef.group.position.y += (0 - chef.group.position.y) * 0.2;
+    if (!celebrating) chef.group.position.y += (0 - chef.group.position.y) * 0.2;
     chef.group.position.y += Math.sin(t * 2.2) * 0.0035;
     chef.tail.rotation.z = Math.sin(t * 3) * 0.3;
     chef.tail.rotation.y = Math.sin(t * 1.5) * 0.15;
     chef.head.rotation.z = Math.sin(t * 1.3) * 0.05;
-    chef.head.rotation.y = Math.sin(t * 0.7) * 0.08;
-    chef.armR.rotation.z = Math.sin(t * (5 + whiskFast * 20)) * (0.1 + whiskFast * 0.2);
-    chef.armR.rotation.x = Math.cos(t * (5 + whiskFast * 20)) * (0.08 + whiskFast * 0.15);
-    chef.whisk.rotation.x = Math.sin(t * 9) * 0.2;
+    chef.head.rotation.y = celebrating ? 0 : Math.sin(t * 0.7) * 0.08;
+    if (eating) {
+      // 츄르를 입에 대고 냠냠
+      qEat.setFromUnitVectors(downVec, eatDir);
+      eul.set(Math.sin(t * 7) * 0.1, 0, Math.cos(t * 7) * 0.06);
+      qWob.setFromEuler(eul);
+      chef.armR.quaternion.copy(qEat).multiply(qWob);
+      chef.head.rotation.x = -0.18 + Math.sin(t * 7) * 0.05;
+      churuPaste.scale.y = Math.max(0.35, churuPaste.scale.y - dt * 0.05);
+      eatTimer -= dt;
+      if (eatTimer <= 0) {
+        eatTimer = 0.55;
+        const p = chef.group.position.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.6, 3.4 * chef.group.scale.x, 0.6));
+        burst(p, Math.random() < 0.5 ? 0xff8fab : 0xffe27a, 6, 0.9);
+        floatText(camera, p, Math.random() < 0.5 ? '냠냠' : '♥');
+        haptic(10);
+      }
+    } else {
+      const wob = 5 + whiskFast * 20;
+      const amp = 0.1 + whiskFast * 0.2;
+      eul.set(Math.sin(t * wob) * amp, 0, Math.cos(t * wob) * amp);
+      qWob.setFromEuler(eul);
+      chef.armR.quaternion.copy(armBase).multiply(qWob);
+      chef.head.rotation.x = 0;
+    }
+    chef.armL.rotation.z = 0.22 + Math.sin(t * 2) * 0.05;
     // 오븐 불빛
     ovenGlow = Math.max(0, ovenGlow - dt * 0.15);
     const g = busy ? ovenGlow : 0;
@@ -657,8 +680,8 @@ export function createStore({ renderer, state, icons, catTexture, foodTexture, i
         const mood = c.age < WORRY_AT ? 'normal' : c.age < ANGRY_AT ? 'worried' : 'angry';
         if (mood !== c.mood) {
           c.mood = mood;
-          c.sprite.material.map = catTexture(c.type, mood);
-          if (mood !== 'normal') gsap.fromTo(c.sprite.position, { y: CUST_Y }, { y: CUST_Y + 0.25, duration: 0.12, yoyo: true, repeat: 1 });
+          c.cat.setMood(mood);
+          if (mood !== 'normal') gsap.fromTo(c.sprite.position, { y: CUST_BASE }, { y: CUST_BASE + 0.25, duration: 0.12, yoyo: true, repeat: 1 });
         }
         const left = Math.max(0, 1 - c.age / PATIENCE);
         const gauge = c.el.querySelector('.gauge i');
@@ -673,22 +696,28 @@ export function createStore({ renderer, state, icons, catTexture, foodTexture, i
       if (!c) return;
       if (c.say > 0) c.say -= dt;
       if (c.status === 'waiting') {
-        c.sprite.position.y = CUST_Y + Math.abs(Math.sin(t * 2 + c.phase)) * 0.05 + (c.mood === 'angry' ? Math.abs(Math.sin(t * 14)) * 0.05 : 0);
-        c.sprite.material.rotation = Math.sin(t * 1.6 + c.phase) * 0.04;
+        c.sprite.position.y = CUST_BASE + Math.abs(Math.sin(t * 2 + c.phase)) * 0.05 + (c.mood === 'angry' ? Math.abs(Math.sin(t * 14)) * 0.05 : 0);
+        c.cat.g.rotation.z = Math.sin(t * 1.6 + c.phase) * 0.04;
+        c.cat.tail.rotation.z = Math.sin(t * 3 + c.phase) * 0.3;
       }
       // DOM 위치
       tmp.set(c.sprite.position.x, CUST_Y, CUST_Z).project(camera); // 말풍선은 흔들리지 않게 기준 높이에 고정
       const sx = (tmp.x * 0.5 + 0.5) * window.innerWidth;
       const sy = (-tmp.y * 0.5 + 0.5) * window.innerHeight;
-      const top = new THREE.Vector3(c.sprite.position.x, CUST_Y + 1.25, CUST_Z).project(camera);
+      const top = new THREE.Vector3(c.sprite.position.x, CUST_Y + 1.3, CUST_Z).project(camera);
       const h = Math.abs(((-top.y * 0.5 + 0.5) * window.innerHeight) - sy) * 2;
       c.el.style.transform = `translate3d(${sx}px, ${sy}px, 0)`;
       c.el.style.setProperty('--h', `${h}px`);
     });
 
-    camera.position.set(0, 9, cam.z);
-    camTarget.set(0, 1.2, -1.5);
+    const f = cam.focus;
+    const wide = camera.aspect >= 1;
+    const fz = wide ? 11.5 : 12.5;
+    camera.position.set(0, 9 + (3.6 - 9) * f, cam.z + (fz - cam.z) * f);
+    camTarget.set((wide ? 2.1 : 0) * f, 1.2 + ((wide ? 1.7 : -0.3) - 1.2) * f, -1.5 + (3 + 1.5) * f);
     camera.lookAt(camTarget);
+    banner.rotation.z = Math.sin(t * 1.3) * 0.035;
+    banner.rotation.x = Math.sin(t * 0.9) * 0.02;
   }
 
   buildShelf();
@@ -707,6 +736,33 @@ export function createStore({ renderer, state, icons, catTexture, foodTexture, i
     refresh() { refreshShelf(); refreshGoods(); },
     isBusy: () => busy,
     cancelBowl() { if (!busy) clearBowl(true); },
+    // 영업이 끝나면 파티시에가 앞을 보고 츄르를 먹어요
+    celebrate(on, earned = 0) {
+      if (on) {
+        celebrating = 1;
+        eating = earned > 0;
+        eatTimer = 0.3;
+        whisk.visible = !eating;
+        churu.visible = eating;
+        churu.position.y = -0.62;
+        churuPaste.scale.y = 1;
+        $('storeUI').hidden = true;
+        gsap.to(chef.group.rotation, { y: 0, duration: 0.8, ease: 'back.out(1.4)' });
+        gsap.fromTo(chef.group.position, { y: 0 }, { y: 0.5, duration: 0.2, yoyo: true, repeat: 1, ease: 'power1.out' });
+        gsap.to(cam, { focus: 1, duration: 1.0, ease: 'power2.inOut' });
+        chefCat.setMood(eating ? 'happy' : 'worried');
+        haptic([20, 30, 40]);
+      } else {
+        celebrating = 0;
+        eating = false;
+        whisk.visible = true;
+        churu.visible = false;
+        gsap.to(chef.group.rotation, { y: Math.PI, duration: 0.6, ease: 'power2.inOut' });
+        gsap.to(cam, { focus: 0, duration: 0.8, ease: 'power2.inOut' });
+        chefCat.setMood('normal');
+        if (visible) $('storeUI').hidden = false;
+      }
+    },
     ready: () => ready,
   };
 }

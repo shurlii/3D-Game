@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { INGREDIENTS, POOP, mat, mesh } from './data.js';
 import { createWorld } from './env.js';
+import { createCat } from './cat.js';
 import { createSparks, floatText, haptic, buzz, REDUCED } from './fx.js';
 
 const gsap = window.gsap;
@@ -13,7 +14,7 @@ const ITEM_SCALE = 1.3;     // 재료 크기 배율
 const SPEEDS = { slow: [3.4, 4.2], mid: [4.8, 5.8], fast: [6.4, 7.6], poop: [4.6, 5.6] };
 
 // 재료 모으기: 하늘에서 떨어지는 재료를 바구니로 받는 30초 게임
-export function createGather({ renderer, catTexture, onFinish }) {
+export function createGather({ renderer, onFinish }) {
   const scene = new THREE.Scene();
   const world = createWorld(scene);
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 80);
@@ -39,8 +40,11 @@ export function createGather({ renderer, catTexture, onFinish }) {
   scene.add(counter);
 
   // 바구니와 고양이
-  const cat = new THREE.Sprite(new THREE.SpriteMaterial({ map: catTexture('baker', 'normal'), transparent: true, alphaTest: 0.05 }));
-  cat.scale.set(1.9, 2.5, 1);
+  const catModel = createCat('baker');
+  const cat = catModel.root;
+  catModel.g.position.y = 0.55;
+  catModel.armL.rotation.set(-0.9, 0, 0.55);
+  catModel.armR.rotation.set(-0.9, 0, -0.55);
   scene.add(cat);
 
   const basket = new THREE.Group();
@@ -65,7 +69,7 @@ export function createGather({ renderer, catTexture, onFinish }) {
   function setMood(name, seconds) {
     moodName = name;
     moodUntil = performance.now() + seconds * 1000;
-    cat.material.map = catTexture('baker', name);
+    catModel.setMood(name);
   }
 
   const protos = new Map();
@@ -124,15 +128,21 @@ export function createGather({ renderer, catTexture, onFinish }) {
     }
   }
 
-  function spawn() {
-    const wantPoop = elapsed > 2 && lastType !== 'poop' && Math.random() < 0.1;
-    let def = POOP;
-    if (!wantPoop) {
-      do { def = INGREDIENTS[Math.floor(Math.random() * INGREDIENTS.length)]; } while (def.id === lastType);
-    }
-    lastType = def.id;
+  const TOTAL_WEIGHT = INGREDIENTS.reduce((a, d) => a + d.weight, 0);
+  function pickIngredient() {
+    // 레시피에 자주 쓰는 재료(버터·설탕·달걀)가 더 자주 나와요
+    let tries = 0;
+    let def;
+    do {
+      let r = Math.random() * TOTAL_WEIGHT;
+      def = INGREDIENTS.find((d) => (r -= d.weight) < 0) || INGREDIENTS[0];
+      tries += 1;
+    } while (def.id === lastType && tries < 6);
+    return def;
+  }
+
+  function spawnOne(def, x) {
     const [lo, hi] = SPEEDS[def.speed];
-    const x = (Math.random() * 2 - 1) * playHalf;
     const obj = protos.get(def.id).clone();
     obj.scale.setScalar(ITEM_SCALE);
     obj.position.set(x, SPAWN_Y, 0);
@@ -140,7 +150,30 @@ export function createGather({ renderer, catTexture, onFinish }) {
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.set(x, 0.02, 0);
     scene.add(obj, shadow);
-    items.push({ def, obj, shadow, x, y: SPAWN_Y, speed: lo + Math.random() * (hi - lo), spin: (Math.random() < 0.5 ? -1 : 1) * (1.2 + Math.random() * 2), wob: Math.random() * 6 });
+    items.push({ def, obj, shadow, x, y: SPAWN_Y, speed: lo + Math.random() * (hi - lo), spin: 1.4 + Math.random() * 1.6, wob: Math.random() * 6 });
+  }
+
+  function spawn() {
+    const wantPoop = elapsed > 2 && lastType !== 'poop' && Math.random() < 0.08;
+    const x = (Math.random() * 2 - 1) * playHalf;
+    if (wantPoop) {
+      lastType = 'poop';
+      spawnOne(POOP, x);
+      return;
+    }
+    const def = pickIngredient();
+    lastType = def.id;
+    spawnOne(def, x);
+    // 가끔 한 번에 두 개가 떨어져요
+    if (Math.random() < 0.4) {
+      let x2 = (Math.random() * 2 - 1) * playHalf;
+      for (let k = 0; k < 4 && Math.abs(x2 - x) < 1.7; k += 1) x2 = (Math.random() * 2 - 1) * playHalf;
+      if (Math.abs(x2 - x) >= 1.7) {
+        const d2 = pickIngredient();
+        lastType = d2.id;
+        spawnOne(d2, x2);
+      }
+    }
   }
 
   function removeItem(i) {
@@ -264,7 +297,9 @@ export function createGather({ renderer, catTexture, onFinish }) {
     player.vx = (player.x - prevX) / Math.max(dt, 0.001);
     basket.position.set(player.x, BASKET_Y, 0.4);
     if (!gsap.isTweening(basket.rotation)) basket.rotation.z = THREE.MathUtils.lerp(basket.rotation.z, -player.vx * 0.025, 0.2);
-    cat.position.set(player.x, 1.35 + Math.sin(t * 5) * 0.03, -0.4);
+    cat.position.set(player.x, 0.55 + Math.sin(t * 5) * 0.03, -0.35);
+    catModel.tail.rotation.z = Math.sin(t * 4) * 0.3;
+    catModel.head.rotation.z = THREE.MathUtils.clamp(-player.vx * 0.012, -0.2, 0.2);
 
     if (state === 'play') {
       elapsed += dt;
@@ -276,7 +311,7 @@ export function createGather({ renderer, catTexture, onFinish }) {
       spawnIn -= dt;
       if (spawnIn <= 0 && state === 'play') {
         spawn();
-        spawnIn = Math.max(0.36, 0.62 - elapsed * 0.009) + Math.random() * 0.16;
+        spawnIn = Math.max(0.3, 0.55 - elapsed * 0.008) + Math.random() * 0.14;
       }
     }
 
@@ -285,8 +320,8 @@ export function createGather({ renderer, catTexture, onFinish }) {
       const it = items[i];
       it.y -= it.speed * dt;
       it.obj.position.set(it.x, it.y, 0);
-      it.obj.rotation.y += it.spin * dt;
-      it.obj.rotation.z = Math.sin(t * 3 + it.wob) * 0.18;
+      it.obj.rotation.y = Math.sin(t * it.spin + it.wob) * 0.55; // 이름표가 보이도록 빙글 돌지 않고 살랑살랑
+      it.obj.rotation.z = Math.sin(t * 3 + it.wob) * 0.14;
       it.shadow.scale.setScalar(0.5 + THREE.MathUtils.clamp(1 - (it.y - RIM_Y) / 8, 0, 1) * 0.7);
       if (state === 'play') {
         if (it.def.id === 'poop' && it.y > RIM_Y && it.y < RIM_Y + 4 && Math.abs(it.x - player.x) < 1.5) poopClose = true;
@@ -300,9 +335,9 @@ export function createGather({ renderer, catTexture, onFinish }) {
 
     if (performance.now() > moodUntil && moodName !== 'normal' && state !== 'result' && state !== 'over') {
       moodName = 'normal';
-      cat.material.map = catTexture('baker', 'normal');
+      catModel.setMood('normal');
     }
-    if (moodName === 'normal') cat.material.map = catTexture('baker', poopClose ? 'worried' : 'normal');
+    if (moodName === 'normal') catModel.setMood(poopClose ? 'worried' : 'normal');
 
     camera.position.set(player.x * 0.12 + cam.shakeX, cam.baseY + cam.shakeY, cam.z);
     camTarget.set(player.x * 0.05, 3.5, 0);

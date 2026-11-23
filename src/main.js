@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { INGREDIENTS, RECIPES, RECIPE_BY_ID, PRICES, BUNDLE_SIZE, CURRENCY, CAT_TYPES } from './data.js';
+import { INGREDIENTS, RECIPES, RECIPE_BY_ID, PRICES, BUNDLE_SIZE, CURRENCY } from './data.js';
 import { makeIcons, haptic } from './fx.js';
 import { loadState, saveState } from './save.js';
 import { createGather } from './gather.js';
@@ -7,6 +7,14 @@ import { createStore } from './store.js';
 
 const gsap = window.gsap;
 const $ = (id) => document.getElementById(id);
+
+// 귀여운 글꼴이 준비된 뒤에 재료 이름표와 현수막을 그려요 (최대 2초만 기다려요)
+try {
+  await Promise.race([
+    Promise.all([document.fonts.load('40px "Jua"', '가나다라 Butter'), document.fonts.ready]),
+    new Promise((resolve) => setTimeout(resolve, 2000)),
+  ]);
+} catch (e) { /* 글꼴을 못 불러오면 기본 글꼴로 보여요 */ }
 
 let renderer;
 try {
@@ -37,14 +45,6 @@ function boot(renderer) {
     t.generateMipmaps = false;
     return t;
   };
-  const catCache = new Map();
-  const catTexture = (name, mood) => {
-    const key = `${name}_${mood}`;
-    if (!catCache.has(key)) catCache.set(key, pixelTex(`./assets/cats/cat_${name}_${mood}.png`));
-    return catCache.get(key);
-  };
-  // 표정 그림을 미리 불러와서 바뀔 때 깜빡이지 않게 합니다
-  ['baker', ...CAT_TYPES].forEach((n) => ['normal', 'happy', 'worried', 'angry'].forEach((mood) => catTexture(n, mood)));
   const foodCache = new Map();
   const foodTexture = (id) => {
     if (!foodCache.has(id)) foodCache.set(id, pixelTex(RECIPE_BY_ID[id].img));
@@ -111,13 +111,12 @@ function boot(renderer) {
 
   const gather = createGather({
     renderer,
-    catTexture,
     onFinish: (counts) => {
       Object.entries(counts).forEach(([id, n]) => { state.inventory[id] = (state.inventory[id] || 0) + n; });
       save();
     },
   });
-  const store = createStore({ renderer, state, icons, catTexture, foodTexture, iconTexture, save, hooks });
+  const store = createStore({ renderer, state, icons, foodTexture, iconTexture, save, hooks });
   let current = store;
 
   function resize() {
@@ -173,13 +172,15 @@ function boot(renderer) {
   // ----- 패널 (사기 / 매출 / 영업 결과) -----
   const panel = $('panel');
   const panelBody = $('panelBody');
-  function openPanel(html) {
+  function openPanel(html, bottom = false) {
     panelBody.innerHTML = html;
+    panel.classList.toggle('bottom', bottom);
     panel.hidden = false;
     store.setPaused(true);
     gsap.fromTo(panel.firstElementChild, { y: 40, opacity: 0, scale: 0.94 }, { y: 0, opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(1.8)' });
   }
   function closePanel() {
+    if (panel.classList.contains('bottom')) store.celebrate(false);
     panel.hidden = true;
     store.setPaused(false);
     store.refresh();
@@ -232,8 +233,13 @@ function boot(renderer) {
   }
   function openDayResult(r) {
     panelBody.onclick = null;
-    openPanel(`<p class="eyebrow">영업 종료</p><h2>오늘의 매출</h2><p class="big">${money(r.revenue)}</p><p class="how">판매 ${money(r.gross)} − 놓친 손님 ${money(r.penalty)}<br>손님 ${r.served}개 판매 · 놓친 손님 ${r.missed}명</p>${soldHtml(r.sold)}<p class="how">매출이 장부에 기록됐어요. 누적 매출 <b>${money(state.lifetime)}</b></p>`);
-    haptic([20, 30, 40]);
+    const earned = Math.max(0, r.revenue);
+    const headline = earned > 0
+      ? `<h2>츄르 ${earned.toLocaleString('ko-KR')}개 값을<br>벌었어요!</h2>`
+      : '<h2>오늘은 츄르를<br>벌지 못했어요</h2>';
+    const note = earned > 0 ? '' : '<p class="how">내일은 더 잘할 수 있어요!</p>';
+    openPanel(`<p class="eyebrow">영업 종료</p>${headline}${note}<p class="how">판매 ${money(r.gross)} − 놓친 손님 ${money(r.penalty)}<br>판매 ${r.served}개 · 놓친 손님 ${r.missed}명</p>${soldHtml(r.sold)}<p class="how">매출이 장부에 기록됐어요. 누적 매출 <b>${money(state.lifetime)}</b></p>`, true);
+    store.celebrate(true, earned);
   }
 
   // ----- 버튼 연결 -----
