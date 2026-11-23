@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Meow Bakery 3D</title>
+  <meta name="description" content="구름 위 빵집에서 하늘에서 떨어지는 재료를 받는 3D 게임">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%E2%98%81%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./style.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="scene" aria-label="3D 게임 화면"></canvas>
+
+  <div id="hud" hidden>
+    <div id="timer" aria-live="off">30</div>
+    <div id="chips"></div>
+  </div>
+
+  <div id="countdown" hidden></div>
+
+  <section id="start" class="card-wrap">
+    <div class="card">
+      <p class="eyebrow">구름 위 빵집</p>
+      <h1>Meow Bakery <span>3D</span></h1>
+      <p class="desc">30초 동안 하늘에서 떨어지는 베이킹 재료를 바구니에 받아요.<br><b>똥</b>을 받으면 이번 판 재료가 모두 사라지니 조심하세요!</p>
+      <p class="how">마우스·터치로 바구니 이동 / 방향키 ← →</p>
+      <button id="startBtn" class="btn" type="button">시작하기</button>
+    </div>
+  </section>
+
+  <section id="result" class="card-wrap" hidden>
+    <div class="card">
+      <p class="eyebrow">시간 끝!</p>
+      <h2>모은 재료 <span id="total">0</span>개</h2>
+      <ul id="resultList"></ul>
+      <p id="poopNote" class="how"></p>
+      <button id="againBtn" class="btn" type="button">다시 하기</button>
+    </div>
+  </section>
+
+  <section id="nogl" class="card-wrap" hidden>
+    <div class="card">
+      <h2>3D를 표시할 수 없어요</h2>
+      <p class="desc">이 기기나 브라우저에서는 3D(WebGL)를 쓸 수 없는 것 같아요.<br>다른 브라우저(Chrome, Safari 최신 버전)로 열어 보세요.</p>
+    </div>
+  </section>
+
+  <script src="./vendor/gsap.min.js"></script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
