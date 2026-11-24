@@ -4,7 +4,6 @@ export function startSky(canvas, imgSrcs) {
   const imgs = imgSrcs.filter(Boolean).map((src) => { const i = new Image(); i.src = src; return i; });
   const rnd = (a, b) => a + Math.random() * (b - a);
   let W = 0; let H = 0; let dpr = 1; let raf = 0; let running = true;
-  let back = null; let front = null;
   const items = [];
 
   // 구름 덩어리 하나 = 둥근 방울 여러 개를 겹쳐서 통통하게
@@ -28,21 +27,20 @@ export function startSky(canvas, imgSrcs) {
     const x = c.getContext('2d'); x.scale(dpr, dpr);
     return [c, x];
   };
+  // 하늘에 몇 개만 둥둥 떠다니는 구름 (메인 화면처럼)
+  const puffs = [];
   function build() {
+    puffs.length = 0;
     const s = Math.max(W, H * 0.7);
-    // 뒤쪽 구름: 하늘 중간~아래에 옅게
-    const [bc, bx] = layerCanvas();
-    const bi = [];
-    for (let i = 0; i < 9; i += 1) bi.push([rnd(-0.05, 1.05) * W, H * rnd(0.38, 0.78), s * rnd(0.35, 0.6), '#e3f1ff']);
-    drawClouds(bx, bi);
-    // 앞쪽 구름: 아래와 양옆, 위쪽까지 통통하게 가득
-    const [fc, fx] = layerCanvas();
-    const fi = [];
-    for (let i = 0; i < 7; i += 1) fi.push([(i / 6) * W * 1.1 - W * 0.05, H * rnd(0.86, 1.02), s * rnd(0.45, 0.7), i % 2 ? '#fff0f5' : '#ffffff']);
-    for (let i = 0; i < 3; i += 1) fi.push([-W * 0.02, H * (0.45 + i * 0.22), s * 0.38, '#ffffff'], [W * 1.02, H * (0.4 + i * 0.24), s * 0.38, '#fff0f5']);
-    for (let i = 0; i < 4; i += 1) fi.push([rnd(0.1, 0.9) * W, H * rnd(0, 0.05), s * rnd(0.3, 0.45), '#ffffff']);
-    drawClouds(fx, fi);
-    back = bc; front = fc;
+    const n = W > H ? 6 : 4;
+    for (let i = 0; i < n; i += 1) {
+      const w = s * rnd(0.22, 0.34);
+      const c = document.createElement('canvas');
+      c.width = Math.ceil(w * 1.5 * dpr); c.height = Math.ceil(w * 0.9 * dpr);
+      const x = c.getContext('2d'); x.scale(dpr, dpr);
+      drawClouds(x, [[w * 0.75, w * 0.55, w, i % 2 ? '#fff0f5' : '#ffffff']]);
+      puffs.push({ c, w: w * 1.5, h: w * 0.9, x: rnd(-0.1, 1) * W, y: H * (0.08 + (i / n) * 0.8) + rnd(-0.04, 0.04) * H, v: rnd(6, 16) });
+    }
   }
 
   function spawn(initial) {
@@ -70,16 +68,16 @@ export function startSky(canvas, imgSrcs) {
     if (!running) return;
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
-    if (!W || !H || !back) return;
+    if (!W || !H) return;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(back, 0, 0);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    puffs.forEach((p) => { p.x += p.v * dt; if (p.x > W + 20) p.x = -p.w; ctx.drawImage(p.c, p.x, p.y, p.w, p.h); });
     let fell = 0;
     for (let i = items.length - 1; i >= 0; i -= 1) {
       const it = items[i];
       it.y += it.v * dt; it.rot += it.vr * dt;
-      if (it.y > H * 0.95) { items.splice(i, 1); fell += 1; continue; }
+      if (it.y > H + it.s) { items.splice(i, 1); fell += 1; continue; }
       ctx.save();
       ctx.translate(it.x + Math.sin(t * 1.2 + it.sw) * it.swa, it.y);
       ctx.rotate(it.rot);
@@ -87,8 +85,6 @@ export function startSky(canvas, imgSrcs) {
       ctx.restore();
     }
     for (let i = 0; i < fell; i += 1) spawn(false);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(front, 0, 0);
   }
   window.addEventListener('resize', resize);
   resize();

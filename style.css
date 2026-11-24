@@ -1,6 +1,6 @@
 @font-face {
   font-family: "Jua";
-  src: url("./assets/fonts/Jua-subset.woff") format("woff");
+  src: url("./assets/fonts/Jua-subset.woff?v=2") format("woff");
   font-display: swap;
 }
 @font-face {
