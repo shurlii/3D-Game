@@ -220,9 +220,17 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
   churuTip.rotation.y = Math.PI / 4;
   churuTip.scale.set(1, 1, 0.5);
   churu.add(churuTip);
-  const churuPaste = mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.14, 10), mat(0xffb27a), 0, -0.58, 0);
+  // 짜낸 츄르: 포장 끝에서 막 나온 물렁하고 짧은 직사각형 모양
+  const churuPaste = new THREE.Group();
+  churuPaste.position.set(0, -0.535, 0);
+  const pasteMat = mat(0xffbf70);
+  const pasteBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.04, 0.1, 6, 12), pasteMat);
+  pasteBody.scale.set(1.5, 1, 0.85);
+  pasteBody.position.y = -0.09;
+  const pasteBump = mesh(new THREE.SphereGeometry(0.03, 10, 8), pasteMat, 0.012, -0.19, 0.01);
+  pasteBump.scale.set(1.5, 0.7, 0.9);
+  churuPaste.add(pasteBody, pasteBump);
   churu.add(churuPaste);
-  churu.add(mesh(new THREE.SphereGeometry(0.052, 10, 8), mat(0xffb27a), 0, -0.66, 0));
   chef.armR.add(churu);
   let celebrating = 0;       // 0이면 평소, 1이면 영업 종료 장면
   let celebrateFocus = 0;    // 카메라가 파티시에에게 다가가는 정도
