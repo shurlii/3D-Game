@@ -224,7 +224,7 @@ export function createLounge(scene) {
     place(vis) {
       const k = THREE.MathUtils.clamp(vis / 8.5, 0.52, 1);
       layout.k = k;
-      const z = -6.2;
+      const z = -8;
       rug.position.set(0, 0.03, z);
       rug.scale.set(5.2 * k, 3.1 * k, 1);
       rug2.scale.copy(rug.scale);
