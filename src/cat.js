@@ -23,35 +23,27 @@ const DARK = 0x2a2a33;
 
 // 삼색이 무늬를 표면에 납작하게 그린 그림 (덩어리로 튀어나오지 않아요)
 function calicoTexture(kind) {
-  const W = 512;
-  const H = 256;
+  const W = 1024;
+  const H = 512;
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
   const x = c.getContext('2d');
   x.fillStyle = '#ffffff';
   x.fillRect(0, 0, W, H);
   const PX = W / (Math.PI * 2); // 1라디안당 픽셀
-  // (옆 각도, 높이 각도, 반지름, 색): 옆 각도 +는 화면 오른쪽, 높이 각도는 위(0)에서 아래(π)
+  // (옆 각도, 높이 각도, 가로 반지름, 세로 반지름, 색): 크고 매끈한 무늬를 적게
   const patches = kind === 'head'
-    ? [[-0.62, 1.05, 0.52, '#f3a23c'], [0.7, 1.2, 0.44, '#34343f'], [-0.15, 0.55, 0.2, '#f3a23c'], [3.0, 1.0, 0.8, '#f3a23c']]
-    : [[0.85, 1.85, 0.62, '#f3a23c'], [-0.7, 1.3, 0.5, '#34343f'], [2.4, 1.5, 0.7, '#34343f'], [-2.2, 1.7, 0.6, '#f3a23c'], [0.2, 0.7, 0.35, '#f3a23c']];
-  const blob = (u, th, r, color) => {
-    const cx = (0.25 + u / (Math.PI * 2)) * W;
-    const cy = (th / Math.PI) * H;
+    ? [[-0.85, 1.0, 0.5, 0.42, '#f3a23c'], [0.85, 1.0, 0.42, 0.38, '#34343f']]
+    : [[0.9, 1.75, 0.75, 0.6, '#f3a23c'], [-0.85, 1.35, 0.6, 0.5, '#34343f'], [2.6, 1.5, 0.8, 0.55, '#f3a23c']];
+  patches.forEach(([u, th, rx, ry, color]) => {
     x.fillStyle = color;
-    for (let k = 0; k < 7; k += 1) {
-      const a = (k / 7) * Math.PI * 2;
-      const rr = r * PX * (0.55 + 0.25 * Math.sin(k * 2.3 + r * 9));
+    [0, 1, -1].forEach((k) => { // 그림 가장자리에서 이어지게
+      const cx = (0.25 + (u + k * Math.PI * 2) / (Math.PI * 2)) * W;
+      const cy = (th / Math.PI) * H;
       x.beginPath();
-      x.ellipse(cx + Math.cos(a) * r * PX * 0.45, cy + Math.sin(a) * r * PX * 0.4, rr, rr * 0.9, a, 0, Math.PI * 2);
+      x.ellipse(cx, cy, rx * PX, ry * PX, 0.3, 0, Math.PI * 2);
       x.fill();
-    }
-    x.beginPath(); x.ellipse(cx, cy, r * PX * 0.75, r * PX * 0.7, 0, 0, Math.PI * 2); x.fill();
-  };
-  patches.forEach(([u, th, r, color]) => {
-    blob(u, th, r, color);
-    blob(u + Math.PI * 2, th, r, color); // 그림 가장자리에서 이어지게
-    blob(u - Math.PI * 2, th, r, color);
+    });
   });
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -220,13 +212,17 @@ export function createCat(styleName) {
   const acc = st.accessory;
   if (acc) {
     const accMat = mat(acc.color);
-    const bow = (parent, x, y, z, k) => {
-      // 통통하고 둥근 리본: 양쪽 둥근 날개 + 가운데 매듭
+    const bow = (parent, x, y, z, k, rz = 0, rx = 0) => {
+      // 통통하고 둥근 리본: 양쪽 둥근 날개 + 가운데 매듭 (그룹으로 묶어 표면 기울기에 맞춰요)
+      const grp = new THREE.Group();
+      grp.position.set(x, y, z);
+      grp.rotation.set(rx, 0, rz);
       [-1, 1].forEach((s) => {
-        const w = ell(accMat, x + s * 0.2 * k, y, z, 0.22 * k, 0.19 * k, 0.11 * k, parent);
+        const w = ell(accMat, s * 0.2 * k, 0, 0, 0.22 * k, 0.19 * k, 0.11 * k, grp);
         w.rotation.z = s * 0.28;
       });
-      ell(accMat, x, y, z + 0.03 * k, 0.1 * k, 0.1 * k, 0.09 * k, parent);
+      ell(accMat, 0, 0, 0.03 * k, 0.1 * k, 0.1 * k, 0.09 * k, grp);
+      parent.add(grp);
     };
     if (acc.type === 'bow') {
       const collar = mesh(new THREE.TorusGeometry(0.62, 0.05, 8, 24), accMat, 0, 0.82, 0);
@@ -235,7 +231,13 @@ export function createCat(styleName) {
       g.add(collar);
       bow(g, 0, 0.8, 0.8, 1.1);
     } else if (acc.type === 'ribbon') {
-      bow(head, 0.6, 0.95, 0.36, 1.1);
+      // 머리 표면(타원체) 위에 살짝 얹히도록 높이와 기울기를 계산해요
+      const hx = 0.6; const hz = 0.28;
+      const rad = Math.sqrt(1 - (hx / 1.03) ** 2 - (hz / 0.9) ** 2);
+      const surfY = 0.88 * rad;
+      const slopeX = -0.88 * (hx / 1.03 ** 2) / rad;
+      const slopeZ = -0.88 * (hz / 0.9 ** 2) / rad;
+      bow(head, hx, surfY + 0.19, hz, 1.1, Math.atan(slopeX), -Math.atan(slopeZ));
     } else if (acc.type === 'tie') {
       ell(accMat, 0, 0.82, 0.78, 0.1, 0.09, 0.08);
       const t = mesh(new THREE.CylinderGeometry(0.07, 0.15, 0.55, 4), accMat, 0, 0.5, 0.8);
@@ -265,8 +267,25 @@ export function createCat(styleName) {
     const white = mat(0xffffff);
     const pink = mat(0xff8fb1);
     ell(white, 0, 0.32, 0.5, 0.64, 0.74, 0.42);
-    const pocket = mesh(new THREE.BoxGeometry(0.36, 0.26, 0.05), mat(0xffe3ec), 0, 0.18, 0.9);
-    g.add(pocket);
+    // 앞치마 가슴 하트
+    const hs = new THREE.Shape();
+    hs.moveTo(0, -0.45);
+    hs.bezierCurveTo(-0.55, -0.05, -0.5, 0.4, -0.2, 0.4);
+    hs.bezierCurveTo(-0.08, 0.4, 0, 0.3, 0, 0.22);
+    hs.bezierCurveTo(0, 0.3, 0.08, 0.4, 0.2, 0.4);
+    hs.bezierCurveTo(0.5, 0.4, 0.55, -0.05, 0, -0.45);
+    const heart = new THREE.Mesh(new THREE.ExtrudeGeometry(hs, { depth: 0.03, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 2 }), mat(0xff8fb1));
+    heart.scale.setScalar(0.34);
+    heart.position.set(0, 0.3, 0.93);
+    g.add(heart);
+    // 어깨끈: 앞치마 위쪽에서 어깨를 넘어 등 뒤 허리까지 몸에 붙여서
+    const bodyY = (x, z) => 0.55 + 0.95 * Math.sqrt(Math.max(0.012, 1 - (x / 0.95) ** 2 - (z / 0.85) ** 2));
+    [-1, 1].forEach((sx) => {
+      const pts = [[0.3, 0.74], [0.42, 0.6], [0.58, 0.4], [0.72, 0.15], [0.72, -0.15], [0.58, -0.4], [0.42, -0.6], [0.3, -0.74], [0.24, -0.8], [0.2, -0.83]]
+        .map(([x, z]) => new THREE.Vector3(sx * x, bodyY(x, z) + 0.035, z));
+      const strap2 = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.05, 8), white);
+      g.add(strap2);
+    });
     const strap = mesh(new THREE.TorusGeometry(0.9, 0.055, 8, 28), white, 0, 0.45, 0);
     strap.rotation.x = Math.PI / 2;
     strap.scale.set(1.04, 0.9, 1);
