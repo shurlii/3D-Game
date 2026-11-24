@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { INGREDIENTS, RECIPES, RECIPE_BY_ID, PRICES, BUNDLE_SIZE, CURRENCY, FOOD_MODELS } from './data.js';
 import { makeIcons, haptic } from './fx.js';
+import { startSky } from './sky.js';
 import { loadState, saveState } from './save.js';
 import { createGather } from './gather.js';
 import { createStore } from './store.js';
@@ -233,12 +234,21 @@ function boot(renderer) {
   }
 
   // ----- 버튼 연결 -----
+  let sky = null;
   $('startBtn').addEventListener('click', () => {
     $('start').hidden = true;
+    if (sky) sky.stop();
     store.show();
     updateWallet();
     updateTip();
     haptic(10);
+  });
+  $('helpBtn').addEventListener('click', () => {
+    const inner = $('start').querySelector('.card').cloneNode(true);
+    inner.querySelector('#startBtn').remove();
+    inner.querySelector('#skyfx')?.remove();
+    panelBody.onclick = null;
+    openPanel(inner.innerHTML);
   });
   $('gatherBtn').addEventListener('click', (e) => goGather(e.currentTarget));
   $('gBackBtn').addEventListener('click', (e) => goStore(e.currentTarget));
@@ -252,6 +262,7 @@ function boot(renderer) {
   });
   $('loading').remove();
   $('start').hidden = false;
+  sky = startSky($('skyfx'), RECIPES.map((r) => r.img)); // 보이는 상태에서 크기를 재야 해요
   gsap.from('#start .card', { y: 40, opacity: 0, scale: 0.92, duration: 0.6, ease: 'back.out(1.8)' });
 
   window.addEventListener('pagehide', () => { store.cancelBowl(); save(); });

@@ -65,6 +65,8 @@ button { font-family: inherit; }
 }
 .pill b { font-weight: 400; color: var(--pink-deep); font-size: 20px; }
 .open-row { display: flex; gap: 5px; }
+.wallet-row { display: flex; align-items: center; gap: 6px; }
+.pill-btn { white-space: nowrap; }
 .pill-btn {
   border: 0;
   padding: 6px 12px;
@@ -325,6 +327,14 @@ button { font-family: inherit; }
 .float.bad { -webkit-text-stroke-color: #b3263e; font-size: 22px; }
 
 #flash { position: fixed; inset: 0; background: #ff4d6d; opacity: 0; pointer-events: none; z-index: 44; }
+
+/* ---------- 시작 화면: 구름 하늘 ---------- */
+#start { pointer-events: auto; background: linear-gradient(#9fd2ff, #d6ecff 55%, #fff1f6); overflow: hidden; }
+#skyfx { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#start .card { position: relative; z-index: 1; }
+.steps .sub { font-size: .86em; color: #8a6a5c; }
+.pill-btn.help { background: #5bb6ff; color: #fff; box-shadow: 0 3px 0 #2f8fe0; text-shadow: 0 1px 0 rgba(30,100,170,.5); }
+.pill-btn.help:active { transform: translateY(2px); box-shadow: 0 1px 0 #2f8fe0; }
 
 /* ---------- 카드 ---------- */
 .card-wrap { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; pointer-events: none; z-index: 20; }
