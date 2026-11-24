@@ -82,7 +82,7 @@ export function createCat(styleName) {
 
   // 몸
   ell(bodyFur, 0, 0.55, 0, 0.95, 0.95, 0.85);
-  if (st.chest) ell(mat(st.chest), 0, 0.5, 0.52, 0.55, 0.62, 0.42);
+  if (st.chest && !st.chef) ell(mat(st.chest), 0, 0.5, 0.52, 0.55, 0.62, 0.42);
   (st.patches || []).filter((p) => p.body).forEach((p) => ell(mat(p.c), p.x, p.y, p.z + 0.1, p.s[0], p.s[1], p.s[2]));
   if (st.stripe) {
     [0.3, 0.6, 0.9].forEach((y, i) => {
@@ -235,7 +235,7 @@ export function createCat(styleName) {
       g.add(collar);
       bow(g, 0, 0.8, 0.8, 1.1);
     } else if (acc.type === 'ribbon') {
-      bow(head, 0.62, 0.62, 0.42, 1.15);
+      bow(head, 0.6, 0.95, 0.36, 1.1);
     } else if (acc.type === 'tie') {
       ell(accMat, 0, 0.82, 0.78, 0.1, 0.09, 0.08);
       const t = mesh(new THREE.CylinderGeometry(0.07, 0.15, 0.55, 4), accMat, 0, 0.5, 0.8);
@@ -271,12 +271,14 @@ export function createCat(styleName) {
     strap.rotation.x = Math.PI / 2;
     strap.scale.set(1.04, 0.9, 1);
     g.add(strap);
+    // 뒤쪽 앞치마 리본: 둥글고 풍성한 날개 + 매듭 + 늘어진 끈
     [-1, 1].forEach((s) => {
-      const c = mesh(new THREE.ConeGeometry(0.2, 0.5, 4), pink, s * 0.3, 0.45, -0.88);
-      c.rotation.z = -s * Math.PI / 2;
-      g.add(c);
+      const w = ell(pink, s * 0.3, 0.47, -0.93, 0.3, 0.24, 0.13);
+      w.rotation.z = s * 0.25;
+      const tail = ell(pink, s * 0.1, 0.2, -0.93, 0.1, 0.24, 0.07);
+      tail.rotation.z = s * 0.3;
     });
-    ell(pink, 0, 0.45, -0.9, 0.12, 0.12, 0.1);
+    ell(pink, 0, 0.45, -0.96, 0.13, 0.13, 0.11);
     hat = new THREE.Group();
     hat.position.set(0, 0.86, 0);
     hat.add(mesh(new THREE.CylinderGeometry(0.62, 0.66, 0.34, 24), white, 0, 0, 0));
