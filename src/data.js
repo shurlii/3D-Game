@@ -162,14 +162,17 @@ export const POOP = { id: 'poop', name: '똥', color: '#8b5a2b', speed: 'poop', 
 
 
 // ---------- 메뉴 3D 모델 (말풍선·선반·완성품 그림으로 쓰여요) ----------
-const faceOn = (g, y, z, spread = 0.11, size = 0.04) => {
+// 얼굴을 표면에 납작하게 붙여요. surf(x, y)가 있으면 그 곡면 높이에 맞춰 붙고, 없으면 z 평면에 붙어요
+const faceOn = (g, y, z, spread = 0.11, size = 0.04, surf = null) => {
+  const zAt = (x, yy) => (surf ? surf(x, yy) : z);
   const eyeM = new THREE.MeshBasicMaterial({ color: 0x3a2a24 });
   const eye = new THREE.SphereGeometry(size, 10, 8);
-  g.add(mesh(eye, eyeM, -spread, y, z), mesh(eye, eyeM, spread, y, z));
+  [-spread, spread].forEach((x) => { const e = mesh(eye, eyeM, x, y, zAt(x, y)); e.scale.z = 0.25; g.add(e); });
   const blush = new THREE.MeshBasicMaterial({ color: 0xff8fa8, transparent: true, opacity: 0.8 });
   const bg = new THREE.CircleGeometry(size * 1.5, 12);
-  g.add(mesh(bg, blush, -spread * 1.9, y - size * 1.1, z - 0.005), mesh(bg, blush, spread * 1.9, y - size * 1.1, z - 0.005));
-  const smile = mesh(new THREE.TorusGeometry(size * 0.9, size * 0.28, 6, 12, Math.PI), eyeM, 0, y - size * 1.4, z);
+  [-spread * 1.9, spread * 1.9].forEach((x) => g.add(mesh(bg, blush, x, y - size * 1.1, zAt(x, y - size * 1.1) + 0.004)));
+  const smile = mesh(new THREE.TorusGeometry(size * 0.9, size * 0.28, 6, 12, Math.PI), eyeM, 0, y - size * 1.4, zAt(0, y - size * 1.4) + 0.004);
+  smile.scale.z = 0.3;
   smile.rotation.z = Math.PI;
   g.add(smile);
 };
@@ -193,7 +196,7 @@ export const FOOD_MODELS = {
     [0.08, -0.1, -0.28].forEach((y, i) => g.add(mesh(new THREE.SphereGeometry(0.05, 10, 8), i === 1 ? mat(0xff5d7a) : ic, 0, y, 0.15)));
     // 리본 모양 아이싱
     [-1, 1].forEach((s) => { const b = ball(0.07, 0xff5d7a, s * 0.1, 0.03, 0.16, 1.4, 1, 0.5); b.rotation.z = s * 0.4; g.add(b); });
-    faceOn(g, 0.32, 0.17, 0.1, 0.038);
+    faceOn(g, 0.32, 0, 0.1, 0.038, (x, y) => 0.108 * Math.sqrt(Math.max(0.05, 1 - (x / 0.27) ** 2 - ((y - 0.3) / 0.257) ** 2)));
     // 손발 끝 아이싱
     [[-0.52, -0.12], [0.52, -0.12]].forEach(([x, y]) => g.add(ball(0.04, 0xffffff, x, y + 0.03, 0.08)));
     return g;
@@ -203,12 +206,14 @@ export const FOOD_MODELS = {
     const g = new THREE.Group();
     const cookie = new THREE.Group();
     cookie.add(ball(0.5, 0xe0a860, 0, 0, 0, 1, 1, 0.42));
-    [[-0.28, 0.22], [0.3, 0.2], [-0.05, 0.34], [0.32, -0.12], [-0.34, -0.1], [0.05, -0.32], [-0.14, 0.02], [0.18, 0.08]].forEach(([x, y]) => {
-      const chip = ball(0.075, 0x4a2a1c, x, y, 0.19, 1.2, 1, 0.8);
-      chip.rotation.z = x * 2;
+    const surf = (x, y) => 0.21 * Math.sqrt(Math.max(0.05, 1 - (x / 0.5) ** 2 - (y / 0.5) ** 2));
+    // 초코칩은 표면에 납작하게 붙은 그림처럼
+    [[-0.3, 0.2], [0.28, 0.24], [0, 0.34], [0.4, 0.0], [-0.4, 0.02], [0.34, -0.27], [-0.26, -0.3], [0.04, -0.4]].forEach(([x, y], i) => {
+      const chip = ball(0.085, 0x4a2a1c, x, y, surf(x, y) - 0.004, 1.15, 0.9, 0.1);
+      chip.rotation.z = i * 1.3;
       cookie.add(chip);
     });
-    faceOn(cookie, -0.06, 0.205, 0.13, 0.04);
+    faceOn(cookie, -0.06, 0, 0.13, 0.04, surf);
     g.add(cookie);
     g.rotation.z = 0.12;
     return g;
@@ -219,8 +224,13 @@ export const FOOD_MODELS = {
     g.add(mesh(new THREE.CylinderGeometry(0.46, 0.3, 0.3, 14), mat(0xe6a65b), 0, -0.05, 0));
     g.add(mesh(new THREE.TorusGeometry(0.43, 0.045, 8, 28), mat(0xd48f43), 0, 0.1, 0).rotateX(Math.PI / 2));
     g.add(mesh(new THREE.CylinderGeometry(0.41, 0.41, 0.07, 28), mat(0xffd34d), 0, 0.1, 0));
-    [[-0.15, 0.1], [0.18, -0.06], [0.0, 0.2]].forEach(([x, z]) => g.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.012, 12), mat(0xc87a2d), x, 0.141, z)));
-    faceOn(g, -0.03, 0.43, 0.12, 0.04);
+    [[-0.29, 0.2], [0.3, 0.18], [0.0, -0.3]].forEach(([x, z]) => g.add(mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.012, 12), mat(0xc87a2d), x, 0.141, z)));
+    // 얼굴은 커스터드 윗면에 딱 붙여요 (윗면 방향으로 눕힌 얼굴)
+    const face = new THREE.Group();
+    face.position.set(0, 0.137, 0);
+    face.rotation.x = -Math.PI / 2;
+    faceOn(face, 0.04, 0, 0.12, 0.04);
+    g.add(face);
     g.rotation.x = 0.7;
     return g;
   },

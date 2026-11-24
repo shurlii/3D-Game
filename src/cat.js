@@ -221,12 +221,12 @@ export function createCat(styleName) {
   if (acc) {
     const accMat = mat(acc.color);
     const bow = (parent, x, y, z, k) => {
+      // 통통하고 둥근 리본: 양쪽 둥근 날개 + 가운데 매듭
       [-1, 1].forEach((s) => {
-        const c = mesh(new THREE.ConeGeometry(0.2 * k, 0.34 * k, 4), accMat, x + s * 0.17 * k, y, z);
-        c.rotation.z = -s * Math.PI / 2;
-        parent.add(c);
+        const w = ell(accMat, x + s * 0.2 * k, y, z, 0.22 * k, 0.19 * k, 0.11 * k, parent);
+        w.rotation.z = s * 0.28;
       });
-      ell(accMat, x, y, z + 0.01, 0.08 * k, 0.08 * k, 0.08 * k, parent);
+      ell(accMat, x, y, z + 0.03 * k, 0.1 * k, 0.1 * k, 0.09 * k, parent);
     };
     if (acc.type === 'bow') {
       const collar = mesh(new THREE.TorusGeometry(0.62, 0.05, 8, 24), accMat, 0, 0.82, 0);
