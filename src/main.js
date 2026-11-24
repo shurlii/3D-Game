@@ -267,3 +267,12 @@ function boot(renderer) {
 
   updateWallet();
 }
+
+// iOS Safari는 user-scalable=no를 무시해서, 두 번 탭/핀치 확대를 직접 막아요
+['gesturestart', 'gesturechange', 'gestureend'].forEach((ev) => document.addEventListener(ev, (e) => e.preventDefault()));
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => {
+  const now = Date.now();
+  if (now - lastTouchEnd < 350) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });
