@@ -7,13 +7,8 @@ export const CAT_STYLES = {
   tuxedo: { fur: 0x34343f, earInner: 0xff9fb8, muzzle: 0xffffff, chest: 0xffffff, paw: 0xffffff, whiteBlaze: true, accessory: { type: 'bow', color: 0xe0334f } },
   gray: { fur: 0x8f9fb6, earInner: 0xd9b8c4, eye: 0x4fcf8a, accessory: { type: 'tie', color: 0x3f73d6 } }, // 러시안블루
   calico: {
-    fur: 0xffffff, earInner: 0xffc4d4, earL: 0xf3a23c, earR: 0x34343f,
-    patches: [
-      { c: 0xf3a23c, x: -0.55, y: 0.5, z: 0.48, s: [0.5, 0.4, 0.32] },
-      { c: 0x34343f, x: 0.62, y: 0.42, z: 0.42, s: [0.42, 0.36, 0.3] },
-      { c: 0xf3a23c, x: 0.55, y: 0.35, z: 0.55, s: [0.5, 0.45, 0.3], body: true },
-      { c: 0x34343f, x: -0.5, y: 0.75, z: 0.4, s: [0.42, 0.4, 0.3], body: true },
-    ],
+    fur: 0xffffff, earInner: 0xffc4d4, earL: 0x34343f, earR: 0xf3a23c, // 화면 왼쪽 귀 = 주황, 오른쪽 귀 = 검정
+    texture: 'calico',
     accessory: { type: 'bell', color: 0xffc93c },
   },
   mackerel: { fur: 0x9aa4b0, stripe: 0x4b5461, earInner: 0xe0b9c4, muzzle: 0xe8edf2, accessory: { type: 'bandana', color: 0x4fc58a } }, // 고등어
@@ -26,6 +21,44 @@ export const CAT_STYLES = {
 
 const DARK = 0x2a2a33;
 
+// 삼색이 무늬를 표면에 납작하게 그린 그림 (덩어리로 튀어나오지 않아요)
+function calicoTexture(kind) {
+  const W = 512;
+  const H = 256;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  x.fillStyle = '#ffffff';
+  x.fillRect(0, 0, W, H);
+  const PX = W / (Math.PI * 2); // 1라디안당 픽셀
+  // (옆 각도, 높이 각도, 반지름, 색): 옆 각도 +는 화면 오른쪽, 높이 각도는 위(0)에서 아래(π)
+  const patches = kind === 'head'
+    ? [[-0.62, 1.05, 0.52, '#f3a23c'], [0.7, 1.2, 0.44, '#34343f'], [-0.15, 0.55, 0.2, '#f3a23c'], [3.0, 1.0, 0.8, '#f3a23c']]
+    : [[0.85, 1.85, 0.62, '#f3a23c'], [-0.7, 1.3, 0.5, '#34343f'], [2.4, 1.5, 0.7, '#34343f'], [-2.2, 1.7, 0.6, '#f3a23c'], [0.2, 0.7, 0.35, '#f3a23c']];
+  const blob = (u, th, r, color) => {
+    const cx = (0.25 + u / (Math.PI * 2)) * W;
+    const cy = (th / Math.PI) * H;
+    x.fillStyle = color;
+    for (let k = 0; k < 7; k += 1) {
+      const a = (k / 7) * Math.PI * 2;
+      const rr = r * PX * (0.55 + 0.25 * Math.sin(k * 2.3 + r * 9));
+      x.beginPath();
+      x.ellipse(cx + Math.cos(a) * r * PX * 0.45, cy + Math.sin(a) * r * PX * 0.4, rr, rr * 0.9, a, 0, Math.PI * 2);
+      x.fill();
+    }
+    x.beginPath(); x.ellipse(cx, cy, r * PX * 0.75, r * PX * 0.7, 0, 0, Math.PI * 2); x.fill();
+  };
+  patches.forEach(([u, th, r, color]) => {
+    blob(u, th, r, color);
+    blob(u + Math.PI * 2, th, r, color); // 그림 가장자리에서 이어지게
+    blob(u - Math.PI * 2, th, r, color);
+  });
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
 // 귀엽게 둥근 3D 고양이. 앞(+z)을 보고 서 있어요.
 export function createCat(styleName) {
   const st = CAT_STYLES[styleName];
@@ -34,6 +67,8 @@ export function createCat(styleName) {
   root.add(g);
 
   const fur = mat(st.fur);
+  const bodyFur = st.texture === 'calico' ? mat(0xffffff, { map: calicoTexture('body') }) : fur;
+  const headFur = st.texture === 'calico' ? mat(0xffffff, { map: calicoTexture('head') }) : fur;
   const point = mat(st.points || st.fur);
   const dark = mat(st.stripe || 0x2a2a33);
   const inner = mat(st.earInner || 0xffb3c8);
@@ -46,7 +81,7 @@ export function createCat(styleName) {
   };
 
   // 몸
-  ell(fur, 0, 0.55, 0, 0.95, 0.95, 0.85);
+  ell(bodyFur, 0, 0.55, 0, 0.95, 0.95, 0.85);
   if (st.chest) ell(mat(st.chest), 0, 0.5, 0.52, 0.55, 0.62, 0.42);
   (st.patches || []).filter((p) => p.body).forEach((p) => ell(mat(p.c), p.x, p.y, p.z + 0.1, p.s[0], p.s[1], p.s[2]));
   if (st.stripe) {
@@ -83,7 +118,7 @@ export function createCat(styleName) {
   const head = new THREE.Group();
   head.position.set(0, 1.55, 0);
   g.add(head);
-  ell(fur, 0, 0, 0, 1.17 * 0.88, 0.88, 0.9, head);
+  ell(headFur, 0, 0, 0, 1.17 * 0.88, 0.88, 0.9, head);
   if (st.points) ell(point, 0, -0.1, 0.6, 0.6, 0.55, 0.38, head);
   if (st.whiteBlaze) ell(mat(0xffffff), 0, 0.12, 0.7, 0.14, 0.45, 0.2, head);
 

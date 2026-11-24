@@ -72,6 +72,36 @@ export function createStore({ renderer, state, icons, foodTexture, iconTexture, 
   counter.add(mesh(new THREE.BoxGeometry(22.3, 0.14, 1.5), mat(0xfff6ea), 0, 1.17, 0.05));
   scene.add(counter);
 
+  // 손님이 앉는 쪽(카운터 뒤)에는 차분한 카라멜색 카펫을 깔아요. 주방 쪽 바닥은 그대로예요.
+  const carpetTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const x = c.getContext('2d');
+    x.fillStyle = '#ecc99a';
+    x.fillRect(0, 0, 128, 128);
+    x.strokeStyle = '#e0b983';
+    x.lineWidth = 5;
+    x.beginPath();
+    x.moveTo(0, 64); x.lineTo(64, 0); x.lineTo(128, 64); x.lineTo(64, 128); x.closePath();
+    x.stroke();
+    x.fillStyle = '#e6c08c';
+    [[0, 0], [128, 0], [0, 128], [128, 128], [64, 64]].forEach(([px, py]) => { x.beginPath(); x.arc(px, py, 7, 0, Math.PI * 2); x.fill(); });
+    const tx = new THREE.CanvasTexture(c);
+    tx.colorSpace = THREE.SRGBColorSpace;
+    tx.wrapS = tx.wrapT = THREE.RepeatWrapping;
+    tx.repeat.set(10, 5.5);
+    tx.anisotropy = 4;
+    return tx;
+  })();
+  const carpet = new THREE.Mesh(new THREE.PlaneGeometry(20, 11.05), new THREE.MeshStandardMaterial({ map: carpetTex, roughness: 1 }));
+  carpet.rotation.x = -Math.PI / 2;
+  carpet.position.set(0, 0.015, -6.475);
+  scene.add(carpet);
+  const carpetEdge = new THREE.Mesh(new THREE.PlaneGeometry(20, 0.28), new THREE.MeshStandardMaterial({ color: 0xc98f55, roughness: 1 }));
+  carpetEdge.rotation.x = -Math.PI / 2;
+  carpetEdge.position.set(0, 0.017, -0.95 - 0.14);
+  scene.add(carpetEdge);
+
   const decor = createDecor(scene);
   const lounge = createLounge(scene);
 

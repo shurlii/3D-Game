@@ -160,10 +160,10 @@ export function createLounge(scene) {
   const root = new THREE.Group();
   scene.add(root);
 
-  const rug = mesh(new THREE.CircleGeometry(1, 40), mat(0xffe3ec), 0, 0.012, 0);
+  const rug = mesh(new THREE.CircleGeometry(1, 40), mat(0xfff1dc), 0, 0.03, 0);
   rug.rotation.x = -Math.PI / 2;
   root.add(rug);
-  const rug2 = mesh(new THREE.RingGeometry(0.82, 0.9, 40), mat(0xff9fbd), 0, 0.014, 0);
+  const rug2 = mesh(new THREE.RingGeometry(0.82, 0.9, 40), mat(0xc98f55), 0, 0.032, 0);
   rug2.rotation.x = -Math.PI / 2;
   root.add(rug2);
 
@@ -172,10 +172,9 @@ export function createLounge(scene) {
   const tower = buildTower();
   const wheelSet = buildWheel();
   const stoolA = buildStool();
-  const stoolB = buildStool();
   const plantA = plant();
   const plantB = plant();
-  [sofa, table, tower, wheelSet, stoolA, stoolB, plantA, plantB].forEach((o) => root.add(o));
+  [sofa, table, tower, wheelSet, stoolA, plantA, plantB].forEach((o) => root.add(o));
 
   // 쉬고 있는 손님들
   const cats = [];
@@ -191,10 +190,19 @@ export function createLounge(scene) {
     cats.push({ ...c, phase: Math.random() * 6, base: c.root.position.y });
     return c;
   };
-  const sofaCatA = addCat('white', sofa, -0.8, 0.85, 0.05, 0.62, 'happy');
-  const sofaCatB = addCat('calico', sofa, 0.8, 0.85, 0.05, 0.62, 'happy');
+  // 소파에는 한 마리만 옆으로 드러누워 자요
+  const sofaCat = addCat('calico', sofa, 0.45, 0.93, 0.05, 0.62, 'happy');
+  sofaCat.root.rotation.z = Math.PI / 2;
+  sofaCat.root.position.y = 0.93 + 0.95 * 0.62;
+  sofaCat.base = sofaCat.root.position.y;
+  sofaCat.armL.rotation.set(-0.3, 0, 0.2);
+  sofaCat.armR.rotation.set(-0.3, 0, -0.2);
+  // 티테이블에도 한 마리만: 앉아서 발을 까딱까딱
   const teaCat = addCat('siamese', stoolA, 0, 0.58, 0, 0.55, 'happy');
-  const teaCat2 = addCat('gray', stoolB, 0, 0.58, 0, 0.55, 'normal');
+  const foot = new THREE.Group();
+  foot.position.set(0.42, 0.18, 0.62);
+  foot.add(ball(0.2, mat(0x6d4a3a), 0, -0.12, 0.28, 0.85, 0.7, 1.4));
+  teaCat.g.add(foot);
   const towerCat = addCat('cheese', tower, 0.1, 3.52, 0, 0.5, 'happy');
   const houseCat = addCat('black', tower, -0.2, 0.3 + 1.1, 0.1, 0.4, 'normal');
   const wheel = wheelSet.userData.wheel;
@@ -217,7 +225,7 @@ export function createLounge(scene) {
       const k = THREE.MathUtils.clamp(vis / 8.5, 0.52, 1);
       layout.k = k;
       const z = -6.2;
-      rug.position.set(0, 0.012, z);
+      rug.position.set(0, 0.03, z);
       rug.scale.set(5.2 * k, 3.1 * k, 1);
       rug2.scale.copy(rug.scale);
       rug2.position.copy(rug.position);
@@ -227,8 +235,7 @@ export function createLounge(scene) {
       table.position.set(X(2.6), 0, z);
       table.scale.setScalar(k);
       stoolA.position.set(X(1.5), 0, z + 0.9 * k);
-      stoolB.position.set(X(3.7), 0, z + 0.9 * k);
-      stoolA.scale.setScalar(k); stoolB.scale.setScalar(k);
+      stoolA.scale.setScalar(k);
       tower.position.set(X(-7.2), 0, z - 1.4);
       tower.scale.setScalar(k * 0.95);
       wheelSet.position.set(X(7.4), 0, z - 1.2);
@@ -245,8 +252,9 @@ export function createLounge(scene) {
         c.g.scale.y = 1 + Math.sin(t * 1.6 + c.phase) * 0.012; // 숨쉬기
       });
       // 티타임 고양이: 컵을 홀짝
-      teaCat.armR.rotation.x = -0.9 + Math.sin(t * 1.4) * 0.35;
-      teaCat2.head.rotation.z = Math.sin(t * 0.8) * 0.08;
+      // 발 까딱까딱
+      foot.rotation.x = -0.5 + Math.sin(t * 5) * 0.35;
+      teaCat.armR.rotation.x = -0.9 + Math.sin(t * 1.4) * 0.2;
       towerCat.head.rotation.z = Math.sin(t * 0.7 + 1) * 0.1;
       houseCat.head.rotation.y = Math.sin(t * 0.6) * 0.35;
       const toy = tower.userData.toy;
@@ -260,7 +268,7 @@ export function createLounge(scene) {
       // 자는 고양이의 Zzz
       zzz.forEach((s, i) => {
         const p = (t * 0.35 + i * 0.5) % 1;
-        const base = i === 0 ? -0.8 : 0.8;
+        const base = -0.55 - i * 0.12;
         s.position.set(base + p * 0.5, 2.1 + p * 0.9, 0.1);
         s.material.opacity = Math.sin(p * Math.PI);
         s.scale.setScalar(0.5 + p * 0.5);
