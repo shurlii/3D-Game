@@ -132,10 +132,25 @@ function buildWheel() {
   return g;
 }
 
+// 귀여운 크리스마스 트리 (민트 초록 + 분홍 장식 + 노란 별)
 function plant() {
   const g = new THREE.Group();
-  g.add(mesh(new THREE.CylinderGeometry(0.3, 0.22, 0.4, 12), mat(0xff9fbd), 0, 0.2, 0));
-  [[0, 0.75, 0, 0.38], [-0.22, 0.6, 0.05, 0.26], [0.22, 0.62, -0.05, 0.28]].forEach(([x, y, z, r]) => g.add(ball(r, mat(0x6fcf8c), x, y, z)));
+  g.add(mesh(new THREE.CylinderGeometry(0.3, 0.24, 0.36, 14), mat(0xff9fbd), 0, 0.18, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.2, 8), mat(0xb98456), 0, 0.44, 0));
+  const leaf = mat(0x72d6a0);
+  const leaf2 = mat(0x5cc78f);
+  [[0.62, 0.52, 0.4, leaf2], [0.98, 0.42, 0.36, leaf], [1.3, 0.3, 0.32, leaf2]].forEach(([y, r, h, m]) => {
+    const cone = mesh(new THREE.ConeGeometry(r, h * 1.7, 16), m, 0, y, 0);
+    g.add(cone);
+  });
+  // 눈 쌓인 느낌의 하얀 점과 분홍·노랑 장식
+  const orn = (x, y, z, c, r = 0.065) => g.add(ball(r, mat(c, { roughness: 0.3 }), x, y, z));
+  orn(0.3, 0.6, 0.3, 0xff7fa6); orn(-0.32, 0.56, 0.28, 0xffd54a); orn(0.05, 0.54, 0.46, 0xffffff);
+  orn(-0.18, 0.95, 0.27, 0xff7fa6); orn(0.22, 0.9, 0.24, 0xffffff); orn(0.0, 1.22, 0.24, 0xffd54a);
+  orn(-0.12, 1.42, 0.0, 0xffffff, 0.05);
+  const star = mesh(new THREE.OctahedronGeometry(0.15, 0), mat(0xffd54a, { emissive: 0xffb300, emissiveIntensity: 0.35 }), 0, 1.7, 0);
+  star.scale.set(1, 1, 0.5);
+  g.add(star);
   return g;
 }
 
