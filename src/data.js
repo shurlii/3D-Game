@@ -186,19 +186,24 @@ export const FOOD_MODELS = {
   // 진저브레드 쿠키: 사람 모양 쿠키
   butterCookie() {
     const g = new THREE.Group();
-    const dough = 0xc98a4b;
-    g.add(ball(0.3, dough, 0, -0.12, 0, 1, 1.15, 0.38));
-    g.add(ball(0.27, dough, 0, 0.3, 0, 1, 0.95, 0.4));
-    const arm = (sx) => { const a = ball(0.14, dough, sx * 0.4, 0.0, 0, 1.5, 0.8, 0.4); a.rotation.z = sx * 0.55; return a; };
-    const leg = (sx) => { const a = ball(0.14, dough, sx * 0.2, -0.5, 0, 0.8, 1.6, 0.4); a.rotation.z = sx * 0.2; return a; };
-    g.add(arm(-1), arm(1), leg(-1), leg(1));
+    // 사람 모양을 한 장의 윤곽선으로 그려서 한 덩어리로 매끈하게 (쿠키 틀로 찍은 모양)
+    const half = [[0, 0.58], [-0.19, 0.52], [-0.275, 0.34], [-0.2, 0.14], [-0.14, 0.07], [-0.3, 0.1], [-0.5, 0.16], [-0.65, 0.17], [-0.72, 0.08], [-0.65, -0.03], [-0.48, -0.06], [-0.33, -0.12], [-0.31, -0.28], [-0.36, -0.46], [-0.4, -0.65], [-0.33, -0.77], [-0.17, -0.75], [-0.1, -0.55], [0, -0.43]];
+    const right = half.slice(1, -1).reverse().map(([x, y]) => [-x, y]);
+    const pts3 = half.concat(right).map(([x, y]) => new THREE.Vector3(x, y, 0));
+    const outline = new THREE.CatmullRomCurve3(pts3, true, 'centripetal').getPoints(220).map((p) => new THREE.Vector2(p.x, p.y));
+    const shape = new THREE.Shape(outline);
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.06, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.04, bevelSegments: 6, curveSegments: 1 });
+    geo.translate(0, 0, -0.03);
+    const body = new THREE.Mesh(geo, mat(0xc98a4b));
+    g.add(body);
+    const Z = 0.085; // 앞면 높이
     const ic = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    [0.08, -0.1, -0.28].forEach((y, i) => g.add(mesh(new THREE.SphereGeometry(0.05, 10, 8), i === 1 ? mat(0xff5d7a) : ic, 0, y, 0.15)));
+    [0.0, -0.17, -0.34].forEach((y, i) => { const d = mesh(new THREE.SphereGeometry(0.05, 10, 8), i === 1 ? mat(0xff5d7a) : ic, 0, y, Z); d.scale.z = 0.35; g.add(d); });
     // 리본 모양 아이싱
-    [-1, 1].forEach((s) => { const b = ball(0.07, 0xff5d7a, s * 0.1, 0.03, 0.16, 1.4, 1, 0.5); b.rotation.z = s * 0.4; g.add(b); });
-    faceOn(g, 0.32, 0, 0.1, 0.038, (x, y) => 0.108 * Math.sqrt(Math.max(0.05, 1 - (x / 0.27) ** 2 - ((y - 0.3) / 0.257) ** 2)));
+    [-1, 1].forEach((s) => { const b2 = ball(0.07, 0xff5d7a, s * 0.1, 0.09, Z + 0.003, 1.4, 1, 0.3); b2.rotation.z = s * 0.4; g.add(b2); });
+    faceOn(g, 0.32, Z, 0.1, 0.038);
     // 손발 끝 아이싱
-    [[-0.52, -0.12], [0.52, -0.12]].forEach(([x, y]) => g.add(ball(0.04, 0xffffff, x, y + 0.03, 0.08)));
+    [[-0.63, 0.07], [0.63, 0.07], [-0.27, -0.7], [0.27, -0.7]].forEach(([x, y]) => g.add(ball(0.045, 0xffffff, x, y, Z, 1, 1, 0.3)));
     return g;
   },
   // 초코칩 쿠키: 동그랗고 통통

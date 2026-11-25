@@ -85,9 +85,11 @@ export function createCat(styleName) {
   // 팔(앞발)
   const mkArm = (side) => {
     const pivot = new THREE.Group();
-    pivot.position.set(side * 0.92, 0.95, 0.12);
-    const arm = mesh(new THREE.CapsuleGeometry(0.17, 0.5, 6, 12), fur, 0, -0.42, 0);
-    pivot.add(arm);
+    pivot.position.set(side * 0.8, 0.93, 0.1);
+    // 어깨부터 손목까지 한 덩어리로 매끈하게 이어지는 팔 (어깨는 두툼, 손목은 살짝 잘록)
+    const profile = [[0, 0.16], [0.1, 0.15], [0.17, 0.09], [0.2, 0], [0.205, -0.12], [0.19, -0.3], [0.165, -0.5], [0.15, -0.65], [0.16, -0.76], [0.12, -0.84], [0, -0.87]]
+      .map(([r, y]) => new THREE.Vector2(r, y));
+    pivot.add(mesh(new THREE.LatheGeometry(new THREE.SplineCurve(profile).getPoints(40), 18), fur, 0, 0, 0));
     const paw = ell(st.paw ? mat(st.paw) : point, 0, -0.82, 0, 0.2, 0.17, 0.22, pivot);
     pivot.userData.paw = paw;
     g.add(pivot);
